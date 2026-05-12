@@ -1,0 +1,10 @@
+{
+  "demoUsdc": "0x5C789abC439d69E4b66160214254DC04EE3e5341",
+  "deployer": "0x71b0C7a96EdAA59caeB614A329d256Ce9F12cC51",
+  "insurancePool": "0xB3C6f054DD1841dA7832a695704BdbB4A4c8D038",
+  "liquidWellnessStrategyId": 3,
+  "policyManager": "0x73a3Bbd0e0961292F6BdF5d3017A70c06A0b2ef2",
+  "pulseMomentumStrategyId": 2,
+  "stablecareAlphaStrategyId": 1,
+  "strategyRegistry": "0x6CE2C0e89BAFaafa50762d0728012cFbb96D0d00"
+}
