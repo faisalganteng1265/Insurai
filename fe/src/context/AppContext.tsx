@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import type { Address } from 'viem'
 import { useAccount, useWalletClient } from 'wagmi'
 import { Strategy, STRATEGIES } from '@/lib/data'
@@ -237,6 +237,12 @@ function policyStatus(status: number): Policy['status'] {
   return 'active'
 }
 
+function riskLabel(score: number): Strategy['risk'] {
+  if (score <= 33) return 'Low'
+  if (score <= 66) return 'Medium'
+  return 'High'
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState('')
@@ -259,13 +265,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount()
   const { data: wagmiWalletClient } = useWalletClient()
 
-  function riskLabel(score: number): Strategy['risk'] {
-    if (score <= 33) return 'Low'
-    if (score <= 66) return 'Medium'
-    return 'High'
-  }
-
-  async function readStrategies() {
+  const readStrategies = useCallback(async () => {
     const loaded: Strategy[] = []
     for (const base of STRATEGIES) {
       const raw = await publicClient.readContract({
@@ -293,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setStrategies(loaded)
     return loaded
-  }
+  }, [])
 
   async function connectWallet() {
     setLastError('')
@@ -319,7 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedStrategy(null)
   }
 
-  async function readPoolStats() {
+  const readPoolStats = useCallback(async () => {
     const [totalDeposits, premiumsCollected, claimsPaid, available, utilizationBps] =
       await publicClient.readContract({
         address: CONTRACTS.insurancePool,
@@ -334,9 +334,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       available: fromUsdc(available),
       utilizationPct: Number(utilizationBps) / 100,
     })
-  }
+  }, [])
 
-  async function readAttestations() {
+  const readAttestations = useCallback(async () => {
     const loaded: Attestation[] = []
     for (const strategy of STRATEGIES) {
       const items = await publicClient.readContract({
@@ -360,9 +360,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     setAttestations(loaded.reverse())
-  }
+  }, [])
 
-  async function readPolicies(account: Address) {
+  const readPolicies = useCallback(async (account: Address) => {
     const ids = await publicClient.readContract({
       address: CONTRACTS.policyManager,
       abi: policyManagerAbi,
@@ -398,9 +398,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setPolicies(loaded)
     return loaded
-  }
+  }, [])
 
-  async function refreshChainData(accountOverride?: Address) {
+  const refreshChainData = useCallback(async (accountOverride?: Address) => {
     try {
       await Promise.all([readPoolStats(), readAttestations(), readStrategies()])
       const account = accountOverride ?? walletAccount ?? undefined
@@ -408,7 +408,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setLastError((err as Error).message)
     }
-  }
+  }, [readAttestations, readPolicies, readPoolStats, readStrategies, walletAccount])
 
   async function createPolicyOnChain({ strategy, coverage, threshold }: CreatePolicyInput) {
     setLoading(true)
@@ -644,22 +644,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshChainData()
-  }, [])
+  }, [refreshChainData])
 
   useEffect(() => {
-    if (isConnected && address) {
-      setWalletConnected(true)
-      setWalletAddress(shortAddress(address))
-      setWalletAccount(address)
-      refreshChainData(address)
-      return
-    }
+    queueMicrotask(() => {
+      if (isConnected && address) {
+        setWalletConnected(true)
+        setWalletAddress(shortAddress(address))
+        setWalletAccount(address)
+        refreshChainData(address)
+        return
+      }
 
-    setWalletConnected(false)
-    setWalletAddress('')
-    setWalletAccount(null)
-    setPolicies([])
-  }, [isConnected, address])
+      setWalletConnected(false)
+      setWalletAddress('')
+      setWalletAccount(null)
+      setPolicies([])
+    })
+  }, [isConnected, address, refreshChainData])
 
   return (
     <AppContext.Provider

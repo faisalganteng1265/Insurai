@@ -34,13 +34,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#f8f8fb]">
       <nav className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur shadow-[0_4px_20px_rgba(31,35,45,0.06)]">
         <div className="mx-auto max-w-7xl px-5 md:px-8">
-          <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex h-16 items-center justify-between gap-3 lg:gap-4">
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
               <div className="size-8 rounded-full bg-[#e94343] grid place-items-center text-xs font-black text-white">CG</div>
               <span className="text-base font-black text-[#d62f35] hidden sm:block">CareGuard</span>
             </Link>
 
-            <div className="flex items-center gap-0.5 overflow-x-auto">
+            <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:justify-center">
               {TABS.map(tab => {
                 const isActive = pathname === tab.href
                 const isClaimTab = tab.href === '/claims'
@@ -48,7 +48,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={tab.href}
                     href={tab.href}
-                    className={`relative px-4 py-2 rounded-full text-sm font-black whitespace-nowrap transition-colors ${
+                    className={`relative px-3 py-2 rounded-full text-xs font-black whitespace-nowrap transition-colors lg:px-4 lg:text-sm ${
                       isActive ? 'bg-[#ffeaea] text-[#d62f35]' : 'text-[#72727c] hover:text-[#d62f35]'
                     }`}
                   >

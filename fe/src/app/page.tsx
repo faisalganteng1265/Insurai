@@ -53,7 +53,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <section className="relative min-h-[92vh] overflow-hidden px-5 pb-14 pt-28 md:px-8 md:pt-32">
+      <section className="relative min-h-[92vh] overflow-hidden px-5 pb-14 pt-28 md:px-8 md:pt-32 lg:h-[90vh] lg:min-h-[660px] lg:max-h-[860px] lg:pb-10 lg:pt-28">
         <div className="absolute inset-0 bg-[#f8f8fb]" />
         <Image
           src="/assets/guardian-robot.png"
@@ -63,20 +63,20 @@ export default function LandingPage() {
           priority
           className="pointer-events-none absolute bottom-[-220px] right-[-150px] z-0 w-[520px] max-w-none opacity-35 sm:right-[-70px] sm:w-[610px] md:bottom-[-260px] md:right-[3vw] md:w-[760px] md:opacity-90"
         />
-        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 md:grid-cols-[0.95fr_1.05fr]">
-          <div className="flex min-h-[68vh] flex-col justify-center">
+        <div className="relative z-10 mx-auto grid h-full max-w-7xl gap-10 md:grid-cols-[0.95fr_1.05fr]">
+          <div className="flex min-h-[68vh] flex-col justify-center lg:min-h-0">
             <p className="mb-5 w-fit rounded-full border border-[#ffd7d7] bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#d62f35]">
               0G verifiable finance demo
             </p>
-            <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-normal text-[#24242b] md:text-7xl">
+            <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-normal text-[#24242b] md:text-7xl lg:text-6xl xl:text-7xl">
               CareGuard Finance
             </h1>
-            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-[#5f606b]">
+            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-[#5f606b] lg:mt-5">
               Insurance for AI copy trading strategies. The demo focuses on the
               safety layer: strategy subscription, policy purchase, TEE proof
               submission, automatic claim tracking, and pool payout.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-3 lg:mt-7">
               <Link
                 className="rounded-full bg-[#d71920] px-6 py-4 text-sm font-black text-white shadow-[0_18px_28px_rgba(215,25,32,0.22)]"
                 href="/marketplace"
@@ -93,7 +93,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-end justify-center md:justify-end">
-            <div className="grid w-full max-w-xl grid-cols-2 gap-3 pb-2 md:pb-10">
+            <div className="grid w-full max-w-xl grid-cols-2 gap-3 pb-2 md:pb-10 lg:pb-6">
               {stats.map(([label, value]) => (
                 <div
                   className="rounded-[28px] bg-white/92 p-5 shadow-[0_18px_55px_rgba(31,35,45,0.08)] backdrop-blur"
