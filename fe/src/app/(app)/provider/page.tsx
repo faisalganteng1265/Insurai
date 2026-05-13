@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useApp } from '@/context/AppContext'
 
 export default function ProviderPage() {
   const { runStrategy, forceLossAttestation, attestations, strategies, loading } = useApp()
-
-  const [strategyId, setStrategyId] = useState('pulse-momentum')
-  const [submitted, setSubmitted] = useState(false)
+  const [strategyId, setStrategyId]       = useState('pulse-momentum')
+  const [submitted, setSubmitted]         = useState(false)
   const [lastRunReturn, setLastRunReturn] = useState<number | null>(null)
 
   const selectedStrategy = strategies.find(s => s.id === strategyId)
@@ -30,54 +30,84 @@ export default function ProviderPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <p className="text-xs font-black uppercase tracking-widest text-[#cfa45b]">Strategy Provider</p>
-        <h1 className="mt-2 text-4xl font-black text-[#f5efe5]">Provider dashboard</h1>
+      {/* Page header */}
+      <div className="relative mb-10 overflow-hidden border-b border-white/[0.05] pb-8">
+        <Image
+          src="/assets/samurai-armor-illustration.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="pointer-events-none object-cover opacity-[0.065] saturate-0"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07080c] via-[#07080c]/80 to-transparent" />
+        <div
+          className="pointer-events-none absolute -right-4 top-1/2 select-none font-black leading-none text-white"
+          style={{ fontSize: '9rem', opacity: 0.04, transform: 'translateY(-50%)' }}
+          aria-hidden="true"
+        >封</div>
+        <div className="relative">
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#cfa45b]">
+            <span className="h-px w-4 bg-[#cfa45b]/55" /> Strategy Provider
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-[#f5efe5] md:text-4xl">Provider dashboard.</h1>
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4 mb-8">
+      {/* Stats */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-4">
         {[
           ['Active Strategy', selectedStrategy?.name ?? '—'],
-          ['Total Copiers', '842'],
-          ['Revenue / mo', '$1,204'],
-          ['Attestations', attestations.length],
+          ['Total Copiers',   '842'],
+          ['Revenue / mo',    '$1,204'],
+          ['Attestations',    attestations.length],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-[24px] bg-[#11141b] p-5 shadow-[0_10px_30px_rgba(31,35,45,0.07)]">
-            <p className="text-[10px] font-black uppercase text-[#7f8794]">{label}</p>
-            <p className="mt-1 text-xl font-black text-[#f5efe5]">{value}</p>
+          <div key={label} className="card-gb p-5">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">{label}</p>
+            <p className="mt-2 text-xl font-black text-[#f5efe5]">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-[28px] bg-[#11141b] p-7 shadow-[0_18px_55px_rgba(31,35,45,0.08)]">
-          <p className="text-xs font-black uppercase tracking-widest text-[#cfa45b] mb-1">Submit TEE Attestation</p>
-          <h2 className="text-2xl font-black text-[#f5efe5] mb-6">Record trade result on-chain</h2>
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        {/* Submit panel */}
+        <div className="card-gb relative overflow-hidden p-7">
+          {/* Ambient glow */}
+          <div
+            className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#cfa45b]"
+            style={{ opacity: 0.04, filter: 'blur(40px)' }}
+            aria-hidden="true"
+          />
+
+          <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#cfa45b]">
+            <span className="h-px w-4 bg-[#cfa45b]/55" /> Submit TEE Attestation
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-[#f5efe5]">Record trade result on-chain</h2>
 
           {submitted ? (
-            <div className="rounded-2xl bg-[#dff8ee] border border-[#b7ecd6] p-6 text-center">
-              <p className="text-2xl mb-2">✓</p>
-              <p className="text-base font-black text-[#11875d]">Attestation recorded on-chain</p>
+            <div className="mt-6 border border-[#22c55e]/20 bg-[#051209] p-6 text-center">
+              <p className="mb-1 text-2xl text-[#22c55e] opacity-60">✓</p>
+              <p className="text-base font-black text-[#22c55e]">Attestation recorded on-chain</p>
               {lossPct && lossPct > 0 && (
-                <p className="mt-2 text-sm font-bold text-[#2a6e4a]">
+                <p className="mt-2 text-sm font-bold text-[#22c55e]/60">
                   Loss of {lossPct}% detected — insurance claims auto-triggered.
                 </p>
               )}
               <button
-                onClick={() => { setSubmitted(false) }}
-                className="mt-4 text-sm font-black text-[#308ca0]"
+                onClick={() => setSubmitted(false)}
+                className="mt-4 text-sm font-black text-[#cfa45b] hover:text-[#e8b96a] transition-colors"
               >
                 Submit another →
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="mt-6 space-y-4">
               <div>
-                <label className="text-xs font-black uppercase text-[#7f8794] mb-1.5 block">Strategy</label>
+                <label className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">Strategy</label>
                 <select
                   value={strategyId}
                   onChange={e => setStrategyId(e.target.value)}
-                  className="w-full rounded-2xl border border-[#2a2f3a] bg-[#171b24] px-4 py-3 text-sm font-black text-[#f5efe5] outline-none"
+                  className="w-full border border-[#1e2330] bg-[#0d1018] px-4 py-3 text-sm font-black text-[#d8d0c4] outline-none focus:border-[#cfa45b]/30"
                 >
                   {strategies.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -85,49 +115,51 @@ export default function ProviderPage() {
                 </select>
               </div>
 
-              <div className="rounded-2xl border border-[#2a2f3a] bg-[#171b24] p-4">
-                <p className="text-xs font-bold leading-5 text-[#a7adb8]">
-                  This calls the backend strategy runner. The backend fetches market data, requests 0G Compute TEE inference,
-                  stores the execution payload, records the attestation on-chain, then triggers eligible policy claims.
+              <div className="border border-[#1e2330] bg-[#0d1018] p-4">
+                <p className="text-xs font-medium leading-5 text-[#4a5568]">
+                  Calls the backend strategy runner — fetches market data, requests 0G Compute TEE inference, stores the execution payload, records attestation on-chain, then triggers eligible policy claims.
                 </p>
               </div>
 
               <button
                 onClick={handleSubmit}
                 disabled={loading || !selectedStrategy}
-                className="w-full rounded-full bg-[#b83227] py-4 text-sm font-black text-white shadow-[0_14px_24px_rgba(215,25,32,0.2)] disabled:opacity-60"
+                className="btn-shimmer w-full bg-[#b83227] py-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(184,50,39,0.28)] disabled:opacity-40"
               >
-                {loading ? 'Running 0G strategy...' : 'Run Strategy + Record Attestation'}
+                {loading ? 'Running 0G strategy…' : 'Run Strategy + Record Attestation'}
               </button>
 
               <button
                 onClick={handleForceLoss}
                 disabled={loading || !selectedStrategy}
-                className="w-full rounded-full border border-[#b83227] bg-[#11141b] py-4 text-sm font-black text-[#b83227] disabled:opacity-60"
+                className="w-full border border-[#b83227]/40 bg-[#0d0606] py-4 text-sm font-black text-[#b83227] transition-colors hover:border-[#b83227]/70 disabled:opacity-40"
               >
-                Force -30% Loss Attestation
+                Force −30% Loss Attestation
               </button>
             </div>
           )}
         </div>
 
+        {/* Attestation history */}
         <div>
-          <h2 className="text-lg font-black text-[#f5efe5] mb-4">Attestation History</h2>
-          <div className="rounded-[28px] bg-[#2b2c34] p-5 space-y-3">
+          <p className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#cfa45b]">
+            <span className="h-px w-4 bg-[#cfa45b]/40" /> Attestation History
+          </p>
+          <div className="card-gb-dark divide-y divide-white/[0.04]">
             {attestations.map(att => (
-              <div key={att.id} className="rounded-2xl bg-[#11141b]/8 p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <p className="text-sm font-black text-white">{att.strategyName}</p>
-                  <span className={`text-sm font-black ${att.tradeReturn >= 0 ? 'text-[#4ade80]' : 'text-[#ff7777]'}`}>
+              <div key={att.id} className="p-4 transition-colors hover:bg-white/[0.02]">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-sm font-black text-[#d8d0c4]">{att.strategyName}</p>
+                  <span className={`text-sm font-black ${att.tradeReturn >= 0 ? 'text-[#22c55e]' : 'text-[#b83227]'}`}>
                     {att.tradeReturn >= 0 ? '+' : ''}{(att.tradeReturn / 100).toFixed(2)}%
                   </span>
                 </div>
-                <p className="text-[10px] font-bold text-[#7f8794] mb-1">{att.timestamp}</p>
-                <p className="font-mono text-[10px] text-[#7f8794]">{att.teeId}</p>
+                <p className="text-[10px] font-bold text-[#2d3748]">{att.timestamp}</p>
+                <p className="mt-0.5 font-mono text-[9px] text-[#1e2330]">{att.teeId}</p>
               </div>
             ))}
             {attestations.length === 0 && (
-              <p className="text-sm font-bold text-[#7f8794] text-center py-4">No attestations yet.</p>
+              <p className="p-8 text-center text-sm font-bold text-[#374151]">No attestations yet.</p>
             )}
           </div>
         </div>
