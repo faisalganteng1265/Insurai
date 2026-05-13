@@ -7,6 +7,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { AppProvider, useApp } from '@/context/AppContext'
 import { Web3Provider } from '@/context/Web3Provider'
 import PolicyWizardModal from '@/components/PolicyWizardModal'
+import EmberParticles from '@/components/EmberParticles'
 
 const TABS = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -24,6 +25,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#07080c] text-[#f5efe5]">
+      <EmberParticles />
 
       {/* ── App Nav ─────────────────────────────── */}
       <nav className="sticky top-0 z-30 bg-[#07080c]/92 backdrop-blur-xl">
@@ -108,7 +110,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* ── Content ─────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-5 py-10 md:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-5 py-10 md:px-8">
         {lastError && (
           <div className="mb-6 border border-[#5c2a23] bg-[#1a0a08] px-4 py-3 text-sm font-bold text-[#c0393f]">
             {lastError.length > 180 ? `${lastError.slice(0, 180)}…` : lastError}
