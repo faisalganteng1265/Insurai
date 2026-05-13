@@ -14,6 +14,19 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-cinzel), 'Georgia', serif;
+  --font-jp: var(--font-noto-jp), serif;
+}
+
+/* ── Fonts ────────────────────────────────────── */
+
+h1, h2, h3 {
+  font-family: var(--font-cinzel), 'Georgia', serif;
+  letter-spacing: -0.01em;
+}
+
+.font-jp {
+  font-family: var(--font-noto-jp), serif;
 }
 
 /* ── Base ─────────────────────────────────────── */
