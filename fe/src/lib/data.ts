@@ -33,7 +33,7 @@ export const STRATEGIES: Strategy[] = [
     teeAgentId: '0x',
     strategyStorageRoot: '0x',
     strategyConfigHash: '0x',
-    accent: 'bg-[#e94343]',
+    accent: 'bg-[#b83227]',
     active: true,
   },
   {

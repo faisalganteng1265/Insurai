@@ -23,18 +23,18 @@ function StatusTracker({ status }: { status: Policy['status'] }) {
             <div
               className={`size-3 rounded-full transition-all ${
                 i < current
-                  ? 'bg-[#e94343]'
+                  ? 'bg-[#b83227]'
                   : i === current
-                  ? 'bg-[#e94343] ring-4 ring-[#e94343]/20 animate-pulse'
-                  : 'bg-white/20'
+                  ? 'bg-[#b83227] ring-4 ring-[#b83227]/20 animate-pulse'
+                  : 'bg-[#11141b]/20'
               }`}
             />
-            <span className={`text-[9px] font-black whitespace-nowrap ${i <= current ? 'text-[#ffb8b8]' : 'text-white/30'}`}>
+            <span className={`text-[9px] font-black whitespace-nowrap ${i <= current ? 'text-[#ffb8b8]' : 'text-[#5c6470]'}`}>
               {label}
             </span>
           </div>
           {i < CLAIM_STEPS.length - 1 && (
-            <div className={`w-14 h-0.5 mb-5 mx-1 transition-colors ${i < current ? 'bg-[#e94343]' : 'bg-white/15'}`} />
+            <div className={`w-14 h-0.5 mb-5 mx-1 transition-colors ${i < current ? 'bg-[#b83227]' : 'bg-[#11141b]/15'}`} />
           )}
         </div>
       ))}
@@ -54,7 +54,7 @@ function ClaimCard({ policy }: { policy: Policy }) {
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-[#ffb8b8]">Auto-Claim</p>
             <h3 className="mt-1 text-xl font-black text-white">{policy.strategyName}</h3>
-            <p className="text-xs font-mono text-white/40 mt-0.5">{policy.id}</p>
+            <p className="text-xs font-mono text-[#7f8794] mt-0.5">{policy.id}</p>
           </div>
           {policy.status === 'paid' && (
             <span className="rounded-full bg-[#dff8ee] px-3 py-1.5 text-[10px] font-black text-[#11875d]">
@@ -68,38 +68,38 @@ function ClaimCard({ policy }: { policy: Policy }) {
         {canAdvance && (
           <button
             onClick={() => advanceClaim(policy.id)}
-            className="mt-5 rounded-full border border-white/20 px-4 py-2 text-xs font-black text-white/70 hover:bg-white/10 transition-colors"
+            className="mt-5 rounded-full border border-white/20 px-4 py-2 text-xs font-black text-[#d5c7aa] hover:bg-[#11141b]/10 transition-colors"
           >
             Advance Status (Demo) →
           </button>
         )}
       </div>
 
-      <div className="bg-white p-6">
+      <div className="bg-[#11141b] p-6">
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             ['Loss Amount', `${Math.abs(relatedAtt?.tradeReturn ?? 0) / 100}%`],
             ['Coverage', `$${policy.coverage.toLocaleString()} USDC`],
             ['Threshold', `${policy.threshold}%`],
           ].map(([l, v]) => (
-            <div key={l} className="rounded-xl bg-[#f4f4f7] p-3">
-              <p className="text-[10px] font-black uppercase text-[#9b9ba5]">{l}</p>
-              <p className="mt-0.5 text-sm font-black text-[#24242b]">{v}</p>
+            <div key={l} className="rounded-xl bg-[#171b24] p-3">
+              <p className="text-[10px] font-black uppercase text-[#7f8794]">{l}</p>
+              <p className="mt-0.5 text-sm font-black text-[#f5efe5]">{v}</p>
             </div>
           ))}
         </div>
 
         {relatedAtt && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase text-[#9b9ba5]">Verifiable Proof</p>
+            <p className="text-[10px] font-black uppercase text-[#7f8794]">Verifiable Proof</p>
             {[
               ['TEE Attestation ID', relatedAtt.teeId],
               ['Proof Hash', relatedAtt.proofHash],
               ['Storage Root (0G)', relatedAtt.storageRoot],
             ].map(([l, v]) => (
-              <div key={l} className="flex items-center justify-between rounded-xl border border-[#ebebf0] px-3 py-2.5">
-                <span className="text-xs font-bold text-[#9b9ba5]">{l}</span>
-                <span className="font-mono text-xs font-black text-[#3b3b45]">{v}</span>
+              <div key={l} className="flex items-center justify-between rounded-xl border border-[#2a2f3a] px-3 py-2.5">
+                <span className="text-xs font-bold text-[#7f8794]">{l}</span>
+                <span className="font-mono text-xs font-black text-[#f5efe5]">{v}</span>
               </div>
             ))}
             <button className="text-xs font-black text-[#308ca0] mt-1">View on 0G Explorer ↗</button>
@@ -126,18 +126,18 @@ export default function ClaimsPage() {
   return (
     <div>
       <div className="mb-8">
-        <p className="text-xs font-black uppercase tracking-widest text-[#d62f35]">Claim Center</p>
-        <h1 className="mt-2 text-4xl font-black text-[#292932]">Auto-claim tracker</h1>
-        <p className="mt-2 text-sm font-medium text-[#74747f]">
+        <p className="text-xs font-black uppercase tracking-widest text-[#cfa45b]">Claim Center</p>
+        <h1 className="mt-2 text-4xl font-black text-[#f5efe5]">Auto-claim tracker</h1>
+        <p className="mt-2 text-sm font-medium text-[#a7adb8]">
           No manual filing. Claims trigger from TEE attestation and execute on-chain.
         </p>
       </div>
 
       {activeClaims.length === 0 ? (
-        <div className="rounded-[28px] bg-white p-12 text-center shadow-[0_18px_55px_rgba(31,35,45,0.08)]">
+        <div className="rounded-[28px] bg-[#11141b] p-12 text-center shadow-[0_18px_55px_rgba(31,35,45,0.08)]">
           <p className="text-4xl mb-4">🛡</p>
-          <p className="text-lg font-black text-[#33333c]">No active claims</p>
-          <p className="mt-2 text-sm font-medium text-[#9b9ba5]">
+          <p className="text-lg font-black text-[#f5efe5]">No active claims</p>
+          <p className="mt-2 text-sm font-medium text-[#7f8794]">
             All policies are within loss thresholds. Pool is healthy.
           </p>
         </div>

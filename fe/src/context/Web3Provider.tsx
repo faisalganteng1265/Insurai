@@ -6,14 +6,14 @@ import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { careGuardChain } from '@/lib/chain'
+import { insuraiChain } from '@/lib/chain'
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? 'careguard-local-demo'
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? 'insurai-local-demo'
 
 const config = getDefaultConfig({
-  appName: 'CareGuard',
+  appName: 'Insurai',
   projectId,
-  chains: [careGuardChain],
+  chains: [insuraiChain],
   ssr: true,
 })
 

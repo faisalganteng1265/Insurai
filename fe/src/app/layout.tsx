@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CareGuard Finance",
+  title: "Insurai",
   description:
-    "A soft AI guardian interface for 0G verifiable copy-trading insurance.",
+    "A dark samurai-inspired interface for 0G verifiable copy-trading insurance.",
 };
 
 export default function RootLayout({

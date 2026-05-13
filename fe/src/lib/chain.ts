@@ -10,7 +10,7 @@ import {
   type WalletClient,
 } from 'viem'
 
-export const careGuardChain = {
+export const insuraiChain = {
   id: 16602,
   name: '0G Galileo Testnet',
   nativeCurrency: { name: '0G', symbol: '0G', decimals: 18 },
@@ -29,8 +29,8 @@ export const CONTRACTS = {
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'
 
 export const publicClient = createPublicClient({
-  chain: careGuardChain,
-  transport: http(careGuardChain.rpcUrls.default.http[0]),
+  chain: insuraiChain,
+  transport: http(insuraiChain.rpcUrls.default.http[0]),
 })
 
 export const strategyRegistryAbi = parseAbi([
@@ -96,7 +96,7 @@ export async function getWalletClient() {
   await ensureGalileoNetwork()
 
   return createWalletClient({
-    chain: careGuardChain,
+    chain: insuraiChain,
     transport: custom(window.ethereum),
   })
 }
@@ -104,7 +104,7 @@ export async function getWalletClient() {
 export async function ensureGalileoNetwork() {
   if (!window.ethereum) throw new Error('Browser wallet not found')
 
-  const chainIdHex = `0x${careGuardChain.id.toString(16)}`
+  const chainIdHex = `0x${insuraiChain.id.toString(16)}`
   try {
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
@@ -119,9 +119,9 @@ export async function ensureGalileoNetwork() {
       params: [
         {
           chainId: chainIdHex,
-          chainName: careGuardChain.name,
-          nativeCurrency: careGuardChain.nativeCurrency,
-          rpcUrls: careGuardChain.rpcUrls.default.http,
+          chainName: insuraiChain.name,
+          nativeCurrency: insuraiChain.nativeCurrency,
+          rpcUrls: insuraiChain.rpcUrls.default.http,
         },
       ],
     })
@@ -141,7 +141,7 @@ export async function approveIfNeeded(owner: Address, spender: Address, amount: 
   const [account] = await walletClient.getAddresses()
   const hash = await walletClient.writeContract({
     account,
-    chain: careGuardChain,
+    chain: insuraiChain,
     address: CONTRACTS.demoUsdc,
     abi: demoUsdcAbi,
     functionName: 'approve',

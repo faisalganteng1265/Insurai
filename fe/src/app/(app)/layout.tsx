@@ -31,13 +31,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const hasTriggeredClaim = policies.some(p => p.status === 'triggered')
 
   return (
-    <div className="min-h-screen bg-[#f8f8fb]">
-      <nav className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur shadow-[0_4px_20px_rgba(31,35,45,0.06)]">
+    <div className="min-h-screen bg-[#07080c]">
+      <nav className="sticky top-0 z-20 border-b border-black/5 bg-[#11141b]/90 backdrop-blur shadow-[0_4px_20px_rgba(31,35,45,0.06)]">
         <div className="mx-auto max-w-7xl px-5 md:px-8">
           <div className="flex h-16 items-center justify-between gap-3 lg:gap-4">
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
-              <div className="size-8 rounded-full bg-[#e94343] grid place-items-center text-xs font-black text-white">CG</div>
-              <span className="text-base font-black text-[#d62f35] hidden sm:block">CareGuard</span>
+              <div className="size-8 rounded-full bg-[#b83227] grid place-items-center text-xs font-black text-white">IN</div>
+              <span className="text-base font-black text-[#cfa45b] hidden sm:block">Insurai</span>
             </Link>
 
             <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:justify-center">
@@ -49,12 +49,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     key={tab.href}
                     href={tab.href}
                     className={`relative px-3 py-2 rounded-full text-xs font-black whitespace-nowrap transition-colors lg:px-4 lg:text-sm ${
-                      isActive ? 'bg-[#ffeaea] text-[#d62f35]' : 'text-[#72727c] hover:text-[#d62f35]'
+                      isActive ? 'bg-[#251410] text-[#cfa45b]' : 'text-[#a7adb8] hover:text-[#cfa45b]'
                     }`}
                   >
                     {tab.label}
                     {isClaimTab && hasTriggeredClaim && (
-                      <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#e94343]" />
+                      <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#b83227]" />
                     )}
                   </Link>
                 )
@@ -67,14 +67,14 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <button
                     onClick={claimDemoUsdc}
                     disabled={loading}
-                    className="hidden md:block rounded-full border border-[#e5e5ed] bg-white px-3 py-2 text-xs font-black text-[#62626d] disabled:opacity-60"
+                    className="hidden md:block rounded-full border border-[#2a2f3a] bg-[#11141b] px-3 py-2 text-xs font-black text-[#a7adb8] disabled:opacity-60"
                   >
                     Faucet dUSDC
                   </button>
                   <select
                     value={activeRole}
                     onChange={e => setRole(e.target.value as 'copier' | 'provider' | 'underwriter')}
-                    className="hidden sm:block rounded-full border border-[#e5e5ed] bg-white px-3 py-2 text-xs font-black text-[#62626d]"
+                    className="hidden sm:block rounded-full border border-[#2a2f3a] bg-[#11141b] px-3 py-2 text-xs font-black text-[#a7adb8]"
                   >
                     <option value="copier">Copier</option>
                     <option value="provider">Provider</option>
@@ -94,7 +94,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="mx-auto max-w-7xl px-5 py-8 md:px-8">
         {lastError && (
-          <div className="mb-5 rounded-2xl border border-[#ffc8c8] bg-[#ffeaea] px-4 py-3 text-sm font-bold text-[#b4232b]">
+          <div className="mb-5 rounded-2xl border border-[#5c2a23] bg-[#251410] px-4 py-3 text-sm font-bold text-[#b4232b]">
             {lastError.length > 180 ? `${lastError.slice(0, 180)}...` : lastError}
           </div>
         )}

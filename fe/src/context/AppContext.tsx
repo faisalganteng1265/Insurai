@@ -18,7 +18,7 @@ import {
   shortHash,
   strategyRegistryAbi,
   toUsdc,
-  careGuardChain,
+  insuraiChain,
 } from '@/lib/chain'
 
 export type Policy = {
@@ -449,7 +449,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!isSubscribed) {
         const subscribeHash = await walletClient.writeContract({
           account,
-          chain: careGuardChain,
+          chain: insuraiChain,
           address: CONTRACTS.strategyRegistry,
           abi: strategyRegistryAbi,
           functionName: 'subscribe',
@@ -469,7 +469,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const policyHash = await walletClient.writeContract({
         account,
-        chain: careGuardChain,
+        chain: insuraiChain,
         address: CONTRACTS.policyManager,
         abi: policyManagerAbi,
         functionName: 'createPolicy',
@@ -590,7 +590,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const hash = await walletClient.writeContract({
         account,
-        chain: careGuardChain,
+        chain: insuraiChain,
         address: CONTRACTS.demoUsdc,
         abi: demoUsdcAbi,
         functionName: 'claimDemoUsdc',
@@ -615,7 +615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await approveIfNeeded(account, CONTRACTS.insurancePool, usdcAmount, walletClient)
       const hash = await walletClient.writeContract({
         account,
-        chain: careGuardChain,
+        chain: insuraiChain,
         address: CONTRACTS.insurancePool,
         abi: insurancePoolAbi,
         functionName: 'deposit',
