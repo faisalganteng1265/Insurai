@@ -13,6 +13,7 @@ const TABS = [
   { href: '/claims', label: 'Claim Center' },
   { href: '/provider', label: 'Provider' },
   { href: '/underwriter', label: 'Underwriter' },
+  { href: '/partnership', label: 'Partnership' },
 ]
 
 function AppShell({ children }: { children: React.ReactNode }) {
