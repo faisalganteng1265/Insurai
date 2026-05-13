@@ -9,6 +9,7 @@ export default function EmberParticles() {
   useEffect(() => {
     const mount = mountRef.current
     if (!mount) return
+    const container = mount
 
     const scene  = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
@@ -81,8 +82,8 @@ export default function EmberParticles() {
     let animId = 0
 
     function resize() {
-      const w = mount.clientWidth
-      const h = mount.clientHeight
+      const w = container.clientWidth
+      const h = container.clientHeight
       renderer.setSize(w, h, false)
       camera.aspect = w / Math.max(h, 1)
       camera.updateProjectionMatrix()

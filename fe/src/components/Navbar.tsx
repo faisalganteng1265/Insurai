@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -30,8 +31,15 @@ export default function Navbar() {
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">
         <Link className="flex items-center gap-3 hover:!transform-none" href="/">
-          <div className="relative grid size-9 place-items-center rounded-full border border-[#cfa45b]/35 bg-[#b83227] text-sm font-black text-white shadow-[0_0_26px_rgba(184,50,39,0.5),0_0_52px_rgba(184,50,39,0.18)]">
-            IN
+          <div className="relative grid size-10 place-items-center">
+            <Image
+              src="/assets/logoinsurai-transparent.png"
+              alt="Insurai logo"
+              width={40}
+              height={40}
+              priority
+              className="h-10 w-10 object-contain drop-shadow-[0_0_18px_rgba(184,50,39,0.46)]"
+            />
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-[15px] font-black tracking-wide text-[#cfa45b]">Insurai</span>

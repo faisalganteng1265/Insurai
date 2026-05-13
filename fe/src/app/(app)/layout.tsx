@@ -37,8 +37,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Logo */}
             <Link href="/" className="flex shrink-0 items-center gap-2.5 hover:opacity-80 transition-opacity">
-              <div className="grid size-8 place-items-center rounded-full bg-[#b83227] text-xs font-black text-white shadow-[0_0_18px_rgba(184,50,39,0.45)]">
-                IN
+              <div className="grid size-9 place-items-center">
+                <Image
+                  src="/assets/logoinsurai-transparent.png"
+                  alt="Insurai logo"
+                  width={36}
+                  height={36}
+                  priority
+                  className="h-9 w-9 object-contain drop-shadow-[0_0_16px_rgba(184,50,39,0.44)]"
+                />
               </div>
               <span className="hidden text-sm font-black text-[#cfa45b] sm:block">Insurai</span>
             </Link>

@@ -30,6 +30,11 @@ export const metadata: Metadata = {
   title: "Insurai",
   description:
     "A dark samurai-inspired interface for 0G verifiable copy-trading insurance.",
+  icons: {
+    icon: "/assets/logoinsurai-transparent.png",
+    shortcut: "/assets/logoinsurai-transparent.png",
+    apple: "/assets/logoinsurai-transparent.png",
+  },
 };
 
 export default function RootLayout({

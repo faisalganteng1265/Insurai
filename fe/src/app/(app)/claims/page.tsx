@@ -146,7 +146,7 @@ export default function ClaimsPage() {
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -right-4 top-1/2 select-none font-black leading-none text-[#b83227]"
+          className="font-jp pointer-events-none absolute -right-4 top-1/2 select-none font-black leading-none text-[#b83227]"
           style={{ fontSize: '9rem', opacity: 0.06, transform: 'translateY(-50%)' }}
           aria-hidden="true"
         >戦</div>

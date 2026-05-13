@@ -97,7 +97,7 @@ export default function MarketplacePage() {
 
         {/* Kanji 剣 */}
         <div
-          className="pointer-events-none absolute -right-4 top-1/2 select-none font-black leading-none text-white"
+          className="font-jp pointer-events-none absolute -right-4 top-1/2 select-none font-black leading-none text-white"
           style={{ fontSize: '9rem', opacity: 0.04, transform: 'translateY(-50%)' }}
           aria-hidden="true"
         >剣</div>

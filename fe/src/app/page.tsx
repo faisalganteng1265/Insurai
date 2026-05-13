@@ -134,7 +134,7 @@ export default function LandingPage() {
 
         {/* Kanji watermark 護 (protect) */}
         <div
-          className="pointer-events-none absolute right-[5%] top-1/2 z-[1] select-none font-black leading-none text-white"
+          className="font-jp pointer-events-none absolute right-[5%] top-1/2 z-[1] select-none font-black leading-none text-white"
           style={{ fontSize: "27vw", opacity: 0.028, transform: "translateY(-50%)" }}
           aria-hidden="true"
         >
@@ -302,7 +302,7 @@ export default function LandingPage() {
       <section className="relative px-5 py-20 md:px-8 lg:py-32" id="stack" style={{ overflowX: 'clip' }}>
         {/* Kanji watermark 武 (warrior) */}
         <div
-          className="pointer-events-none absolute -right-8 top-1/2 select-none font-black leading-none text-[#cfa45b]"
+          className="font-jp pointer-events-none absolute -right-8 top-1/2 select-none font-black leading-none text-[#cfa45b]"
           style={{ fontSize: "22vw", opacity: 0.022, transform: "translateY(-50%)" }}
           aria-hidden="true"
         >
@@ -410,7 +410,7 @@ export default function LandingPage() {
 
         {/* Kanji watermark 剣 (sword) */}
         <div
-          className="pointer-events-none absolute -left-10 top-1/2 select-none font-black leading-none text-white"
+          className="font-jp pointer-events-none absolute -left-10 top-1/2 select-none font-black leading-none text-white"
           style={{ fontSize: "24vw", opacity: 0.018, transform: "translateY(-50%)" }}
           aria-hidden="true"
         >
@@ -563,7 +563,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-[#0c0f15] px-5 py-20 md:px-8 lg:py-32" id="reserve">
         {/* Kanji 盾 (shield/protection) */}
         <div
-          className="pointer-events-none absolute right-0 top-1/2 select-none font-black leading-none text-[#b83227]"
+          className="font-jp pointer-events-none absolute right-0 top-1/2 select-none font-black leading-none text-[#b83227]"
           style={{ fontSize: "20vw", opacity: 0.024, transform: "translateY(-50%)" }}
           aria-hidden="true"
         >
@@ -695,7 +695,7 @@ export default function LandingPage() {
 
         {/* Kanji 入 (enter) watermark */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 select-none font-black leading-none text-[#b83227]"
+          className="font-jp pointer-events-none absolute left-1/2 top-1/2 select-none font-black leading-none text-[#b83227]"
           style={{
             fontSize: "40vw",
             opacity: 0.038,
@@ -754,8 +754,14 @@ export default function LandingPage() {
       <footer className="border-t border-white/[0.06] px-5 py-7 md:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 flex-wrap">
           <Link className="flex items-center gap-2.5 hover:!transform-none" href="/">
-            <div className="grid size-7 place-items-center rounded-full bg-[#b83227] text-[11px] font-black text-white shadow-[0_0_14px_rgba(184,50,39,0.4)]">
-              IN
+            <div className="grid size-8 place-items-center">
+              <Image
+                src="/assets/logoinsurai-transparent.png"
+                alt="Insurai logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain drop-shadow-[0_0_12px_rgba(184,50,39,0.38)]"
+              />
             </div>
             <span className="text-sm font-black text-[#cfa45b]">Insurai</span>
           </Link>
