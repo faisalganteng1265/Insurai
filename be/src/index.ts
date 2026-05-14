@@ -7,6 +7,8 @@ import { attestationsRouter } from "./routes/attestations.js";
 import { poolRouter } from "./routes/pool.js";
 import { demoRouter } from "./routes/demo.js";
 import { copyTradeRouter } from "./routes/copyTrade.js";
+import { getStrategyCount, getStrategy } from "./services/chain.js";
+import { startSchedule } from "./services/scheduler.js";
 
 const app = express();
 
@@ -74,6 +76,25 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
+async function autoStartSchedulers() {
+  try {
+    const count = await getStrategyCount();
+    console.log(`[scheduler] Found ${count} strategies on chain, auto-starting...`);
+    for (let i = 1; i <= Number(count); i++) {
+      try {
+        const strategy = await getStrategy(i);
+        if (strategy.isActive) {
+          startSchedule(Number(strategy.id), strategy.name);
+        }
+      } catch (err) {
+        console.warn(`[scheduler] Skipped strategy ${i}:`, (err as Error).message);
+      }
+    }
+  } catch (err) {
+    console.warn("[scheduler] Auto-start failed (chain unreachable?):", (err as Error).message);
+  }
+}
+
 app.listen(config.port, () => {
   console.log(`\n  CareGuard Finance Backend`);
   console.log(`  ─────────────────────────────────────────`);
@@ -84,6 +105,7 @@ app.listen(config.port, () => {
   console.log(`  Registry:   ${config.strategyRegistryAddress}`);
   console.log(`  Pool:       ${config.insurancePoolAddress}`);
   console.log(`  ─────────────────────────────────────────\n`);
+  autoStartSchedulers();
 });
 
 export default app;

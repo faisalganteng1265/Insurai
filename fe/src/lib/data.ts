@@ -17,59 +17,11 @@ export type Strategy = {
   createdAt?: string
 }
 
-export const STRATEGIES: Strategy[] = [
-  {
-    id: 'stablecare-alpha',
-    contractId: 1,
-    name: 'Stablecare Alpha',
-    tag: 'Low-volatility yield agent',
-    description:
-      'A sealed AI strategy focused on stablecoin yield rotation with automatic cover for drawdowns above 12%.',
-    subscriptionFeeUsdc: 10,
-    riskScore: 20,
-    risk: 'Low',
-    followers: 0,
-    proof: '0x',
-    teeAgentId: '0x',
-    strategyStorageRoot: '0x',
-    strategyConfigHash: '0x',
-    accent: 'bg-[#b83227]',
-    active: true,
-  },
-  {
-    id: 'pulse-momentum',
-    contractId: 2,
-    name: 'Pulse Momentum',
-    tag: 'Adaptive momentum agent',
-    description:
-      'Tracks market regime shifts and mirrors positions only when verifiable execution confidence is above threshold.',
-    subscriptionFeeUsdc: 10,
-    riskScore: 40,
-    risk: 'Medium',
-    followers: 0,
-    proof: '0x',
-    teeAgentId: '0x',
-    strategyStorageRoot: '0x',
-    strategyConfigHash: '0x',
-    accent: 'bg-[#42bfd1]',
-    active: true,
-  },
-  {
-    id: 'liquid-wellness',
-    contractId: 3,
-    name: 'Liquid Wellness',
-    tag: 'Liquidity routing agent',
-    description:
-      'Moves copier capital through audited liquidity venues while claim logic watches loss triggers in real time.',
-    subscriptionFeeUsdc: 10,
-    riskScore: 25,
-    risk: 'Low',
-    followers: 0,
-    proof: '0x',
-    teeAgentId: '0x',
-    strategyStorageRoot: '0x',
-    strategyConfigHash: '0x',
-    accent: 'bg-[#aeb5bd]',
-    active: true,
-  },
+export const STRATEGY_ACCENTS = [
+  'bg-[#b83227]',
+  'bg-[#42bfd1]',
+  'bg-[#aeb5bd]',
+  'bg-[#22c55e]',
+  'bg-[#9b59b6]',
+  'bg-[#e67e22]',
 ]

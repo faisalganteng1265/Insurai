@@ -3,7 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import type { Address } from 'viem'
 import { useAccount, useWalletClient } from 'wagmi'
-import { Strategy, STRATEGIES } from '@/lib/data'
+import { keccak256, toHex, stringToBytes } from 'viem'
+import { toast } from 'sonner'
+import { Strategy, STRATEGY_ACCENTS } from '@/lib/data'
 import {
   API_BASE_URL,
   CONTRACTS,
@@ -89,6 +91,13 @@ type CreatePolicyInput = {
   threshold: number
 }
 
+export type RegisterStrategyInput = {
+  name: string
+  description: string
+  subscriptionFeeUsdc: number
+  riskScore: number
+}
+
 type AppContextType = {
   walletConnected: boolean
   walletAddress: string
@@ -103,6 +112,10 @@ type AppContextType = {
   lastError: string
   copyTradeSchedulers: CopyTradeScheduler[]
   copyTradeFeed: CopyTradeFeedEntry[]
+  underwriterShares: number
+  underwriterShareValue: number
+  providerStrategyIds: number[]
+  pendingFeesByStrategy: Record<number, number>
   connectWallet: () => Promise<void>
   setRole: (role: 'copier' | 'provider' | 'underwriter') => void
   openWizard: (strategy: Strategy) => void
@@ -112,12 +125,15 @@ type AppContextType = {
   forceLossAttestation: (strategy: Strategy, tradeReturn?: number) => Promise<Attestation>
   claimDemoUsdc: () => Promise<string>
   depositToPool: (amount: number) => Promise<string>
+  withdrawFromPool: () => Promise<string>
+  claimFees: (strategyId: number) => Promise<string>
   refreshChainData: () => Promise<void>
   advanceClaim: (policyId: string) => void
   startCopyTrade: (strategy: Strategy, intervalMs?: number) => Promise<void>
   stopCopyTrade: (strategyId: number) => Promise<void>
   runCopyTradeNow: (strategy: Strategy) => Promise<CopyTradeFeedEntry | null>
   refreshCopyTrade: () => Promise<void>
+  registerStrategy: (input: RegisterStrategyInput) => Promise<number>
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -250,10 +266,6 @@ function normalizeStrategy(value: ChainStrategy | ChainStrategyTuple): ChainStra
 const INITIAL_POLICIES: Policy[] = []
 const INITIAL_ATTESTATIONS: Attestation[] = []
 
-function strategyByContractId(id: number) {
-  return STRATEGIES.find(s => s.contractId === id)
-}
-
 function formatExpiry(endTime: bigint) {
   const seconds = Number(endTime) - Math.floor(Date.now() / 1000)
   if (seconds <= 0) return 'expired'
@@ -275,6 +287,35 @@ function riskLabel(score: number): Strategy['risk'] {
   return 'High'
 }
 
+function tagFromRisk(score: number): string {
+  if (score <= 33) return 'Low-risk AI trading agent'
+  if (score <= 66) return 'Balanced AI trading agent'
+  return 'High-yield AI trading agent'
+}
+
+function chainStrategyToFrontend(s: ChainStrategy): Strategy {
+  const contractId = Number(s.id)
+  const riskScore = Number(s.riskScore)
+  return {
+    id: `strategy-${contractId}`,
+    contractId,
+    name: s.name,
+    tag: tagFromRisk(riskScore),
+    description: s.description,
+    subscriptionFeeUsdc: fromUsdc(s.subscriptionFee),
+    riskScore,
+    risk: riskLabel(riskScore),
+    followers: Number(s.totalCopiers),
+    proof: s.teeAgentId,
+    teeAgentId: s.teeAgentId,
+    strategyStorageRoot: s.strategyStorageRoot,
+    strategyConfigHash: s.strategyConfigHash,
+    accent: STRATEGY_ACCENTS[(contractId - 1) % STRATEGY_ACCENTS.length],
+    active: s.isActive,
+    createdAt: new Date(Number(s.createdAt) * 1000).toISOString().slice(0, 10),
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState('')
@@ -293,37 +334,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     available: 0,
     utilizationPct: 0,
   })
-  const [strategies, setStrategies] = useState<Strategy[]>(STRATEGIES)
+  const [strategies, setStrategies] = useState<Strategy[]>([])
   const [copyTradeSchedulers, setCopyTradeSchedulers] = useState<CopyTradeScheduler[]>([])
   const [copyTradeFeed, setCopyTradeFeed] = useState<CopyTradeFeedEntry[]>([])
+  const [underwriterShares, setUnderwriterShares] = useState(0)
+  const [underwriterShareValue, setUnderwriterShareValue] = useState(0)
+  const [providerStrategyIds, setProviderStrategyIds] = useState<number[]>([])
+  const [pendingFeesByStrategy, setPendingFeesByStrategy] = useState<Record<number, number>>({})
   const { address, isConnected } = useAccount()
   const { data: wagmiWalletClient } = useWalletClient()
 
-  const readStrategies = useCallback(async () => {
+  const readStrategies = useCallback(async (): Promise<Strategy[]> => {
+    const count = await publicClient.readContract({
+      address: CONTRACTS.strategyRegistry,
+      abi: strategyRegistryAbi,
+      functionName: 'strategyCount',
+    }) as bigint
+
     const loaded: Strategy[] = []
-    for (const base of STRATEGIES) {
-      const raw = await publicClient.readContract({
-        address: CONTRACTS.strategyRegistry,
-        abi: strategyRegistryAbi,
-        functionName: 'getStrategy',
-        args: [BigInt(base.contractId)],
-      }) as ChainStrategy | ChainStrategyTuple
-      const s = normalizeStrategy(raw)
-      loaded.push({
-        ...base,
-        name: s.name,
-        description: s.description,
-        subscriptionFeeUsdc: fromUsdc(s.subscriptionFee),
-        riskScore: Number(s.riskScore),
-        risk: riskLabel(Number(s.riskScore)),
-        followers: Number(s.totalCopiers),
-        proof: s.teeAgentId,
-        teeAgentId: s.teeAgentId,
-        strategyStorageRoot: s.strategyStorageRoot,
-        strategyConfigHash: s.strategyConfigHash,
-        active: s.isActive,
-        createdAt: new Date(Number(s.createdAt) * 1000).toISOString().slice(0, 10),
-      })
+    for (let i = 1; i <= Number(count); i++) {
+      try {
+        const raw = await publicClient.readContract({
+          address: CONTRACTS.strategyRegistry,
+          abi: strategyRegistryAbi,
+          functionName: 'getStrategy',
+          args: [BigInt(i)],
+        }) as ChainStrategy | ChainStrategyTuple
+        const s = normalizeStrategy(raw)
+        if (s.isActive) loaded.push(chainStrategyToFrontend(s))
+      } catch {
+        // skip invalid/missing strategy slots
+      }
     }
     setStrategies(loaded)
     return loaded
@@ -331,12 +372,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function connectWallet() {
     setLastError('')
-    const walletClient = wagmiWalletClient ?? await getWalletClient()
-    const [account] = await walletClient.getAddresses()
-    setWalletConnected(true)
-    setWalletAddress(shortAddress(account))
-    setWalletAccount(account)
-    await refreshChainData(account)
+    const id = toast.loading('Connecting wallet…')
+    try {
+      const walletClient = wagmiWalletClient ?? await getWalletClient()
+      const [account] = await walletClient.getAddresses()
+      setWalletConnected(true)
+      setWalletAddress(shortAddress(account))
+      setWalletAccount(account)
+      await refreshChainData(account)
+      toast.success('Wallet connected', { id })
+    } catch (err) {
+      toast.error('Connection failed', { id })
+      throw err
+    }
   }
 
   function setRole(role: 'copier' | 'provider' | 'underwriter') {
@@ -370,9 +418,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const readAttestations = useCallback(async () => {
+  const readAttestations = useCallback(async (strategiesList: Strategy[]) => {
     const loaded: Attestation[] = []
-    for (const strategy of STRATEGIES) {
+    for (const strategy of strategiesList) {
       const items = await publicClient.readContract({
         address: CONTRACTS.strategyRegistry,
         abi: strategyRegistryAbi,
@@ -396,7 +444,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAttestations(loaded.reverse())
   }, [])
 
-  const readPolicies = useCallback(async (account: Address) => {
+  const readPolicies = useCallback(async (account: Address, strategiesList: Strategy[] = []) => {
     const ids = await publicClient.readContract({
       address: CONTRACTS.policyManager,
       abi: policyManagerAbi,
@@ -414,7 +462,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }) as ChainPolicy | ChainPolicyTuple
       const p = normalizePolicy(rawPolicy)
       const contractStrategyId = Number(p.strategyId)
-      const strategy = strategyByContractId(contractStrategyId)
+      const strategy = strategiesList.find(s => s.contractId === contractStrategyId)
       loaded.push({
         id: `POL-0G-${p.id.toString().padStart(5, '0')}`,
         contractPolicyId: p.id.toString(),
@@ -434,19 +482,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return loaded
   }, [])
 
+  const readUnderwriterPosition = useCallback(async (account: Address) => {
+    const [sharesRaw, valueRaw] = await Promise.all([
+      publicClient.readContract({ address: CONTRACTS.insurancePool, abi: insurancePoolAbi, functionName: 'shares', args: [account] }),
+      publicClient.readContract({ address: CONTRACTS.insurancePool, abi: insurancePoolAbi, functionName: 'shareValue', args: [account] }),
+    ])
+    setUnderwriterShares(fromUsdc(sharesRaw as bigint))
+    setUnderwriterShareValue(fromUsdc(valueRaw as bigint))
+  }, [])
+
+  const readProviderData = useCallback(async (account: Address, strategiesList: Strategy[]) => {
+    const ids = await publicClient.readContract({
+      address: CONTRACTS.strategyRegistry,
+      abi: strategyRegistryAbi,
+      functionName: 'getProviderStrategies',
+      args: [account],
+    }) as bigint[]
+    const numIds = ids.map(Number)
+    setProviderStrategyIds(numIds)
+    const fees: Record<number, number> = {}
+    for (const id of numIds) {
+      const strategy = strategiesList.find(s => s.contractId === id)
+      if (!strategy) continue
+      const raw = await publicClient.readContract({
+        address: CONTRACTS.strategyRegistry,
+        abi: strategyRegistryAbi,
+        functionName: 'pendingFees',
+        args: [BigInt(id)],
+      })
+      fees[id] = fromUsdc(raw as bigint)
+    }
+    setPendingFeesByStrategy(fees)
+  }, [])
+
   const refreshChainData = useCallback(async (accountOverride?: Address) => {
     try {
-      await Promise.all([readPoolStats(), readAttestations(), readStrategies()])
+      const [loadedStrategies] = await Promise.all([readStrategies(), readPoolStats()])
+      await readAttestations(loadedStrategies)
       const account = accountOverride ?? walletAccount ?? undefined
-      if (account) await readPolicies(account)
+      if (account) {
+        await readPolicies(account, loadedStrategies)
+        readProviderData(account, loadedStrategies).catch(() => {})
+        readUnderwriterPosition(account).catch(() => {})
+      }
     } catch (err) {
       setLastError((err as Error).message)
     }
-  }, [readAttestations, readPolicies, readPoolStats, readStrategies, walletAccount])
+  }, [readAttestations, readPolicies, readPoolStats, readStrategies, readProviderData, readUnderwriterPosition, walletAccount])
 
   async function createPolicyOnChain({ strategy, coverage, threshold }: CreatePolicyInput) {
     setLoading(true)
     setLastError('')
+    const id = toast.loading('Creating policy on-chain…')
     try {
       const walletClient = wagmiWalletClient ?? await getWalletClient()
       const [account] = await walletClient.getAddresses()
@@ -511,7 +598,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       await publicClient.waitForTransactionReceipt({ hash: policyHash })
 
-      const loadedPolicies = await readPolicies(account)
+      const loadedPolicies = await readPolicies(account, strategies)
       await readPoolStats()
 
       // Auto-start copy trade scheduler if not already running
@@ -546,10 +633,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         expiresIn: '30 days',
         txHash: policyHash,
       }
+      toast.success(`Policy created — $${coverage.toLocaleString()} covered`, { id })
       return loadedPolicies[loadedPolicies.length - 1] ?? fallbackPolicy
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
+      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
       throw err
     } finally {
       setLoading(false)
@@ -559,6 +648,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function runStrategy(strategy: Strategy) {
     setLoading(true)
     setLastError('')
+    const id = toast.loading(`Running ${strategy.name} via 0G Compute…`)
     try {
       const res = await fetch(`${API_BASE_URL}/api/run-strategy`, {
         method: 'POST',
@@ -581,10 +671,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setAttestations(prev => [attestation, ...prev])
       await refreshChainData()
+      const sign = attestation.tradeReturn >= 0 ? '+' : ''
+      toast.success(`Attestation recorded — ${sign}${(attestation.tradeReturn / 100).toFixed(2)}%`, { id })
       return attestation
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
+      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
       throw err
     } finally {
       setLoading(false)
@@ -594,6 +687,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function forceLossAttestation(strategy: Strategy, tradeReturn = -3000) {
     setLoading(true)
     setLastError('')
+    const id = toast.loading('Submitting force loss attestation…')
     try {
       const res = await fetch(`${API_BASE_URL}/api/demo/force-loss-attestation`, {
         method: 'POST',
@@ -616,10 +710,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setAttestations(prev => [attestation, ...prev])
       await refreshChainData()
+      toast.success('Force loss recorded — claims auto-triggered', { id })
       return attestation
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
+      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
       throw err
     } finally {
       setLoading(false)
@@ -629,6 +725,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function claimDemoUsdc() {
     setLoading(true)
     setLastError('')
+    const id = toast.loading('Claiming dUSDC from faucet…')
     try {
       const walletClient = wagmiWalletClient ?? await getWalletClient()
       const [account] = await walletClient.getAddresses()
@@ -638,7 +735,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'hasClaimedFaucet',
         args: [account],
       })
-      if (claimed) return 'already-claimed'
+      if (claimed) {
+        toast.info('Already claimed from faucet', { id })
+        return 'already-claimed'
+      }
 
       const hash = await walletClient.writeContract({
         account,
@@ -648,9 +748,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'claimDemoUsdc',
       })
       await publicClient.waitForTransactionReceipt({ hash })
+      toast.success('dUSDC claimed successfully', { id })
       return hash
     } catch (err) {
       setLastError((err as Error).message)
+      toast.error('Faucet claim failed', { id })
       throw err
     } finally {
       setLoading(false)
@@ -675,9 +777,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       await publicClient.waitForTransactionReceipt({ hash })
       await readPoolStats()
+      toast.success(`$${amount.toLocaleString()} USDC deposited to pool`)
       return hash
     } catch (err) {
-      setLastError((err as Error).message)
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
       throw err
     } finally {
       setLoading(false)
@@ -703,6 +808,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  async function withdrawFromPool(): Promise<string> {
+    setLoading(true)
+    setLastError('')
+    const id = toast.loading('Withdrawing from pool…')
+    try {
+      const walletClient = wagmiWalletClient ?? await getWalletClient()
+      const [account] = await walletClient.getAddresses()
+      const sharesRaw = await publicClient.readContract({
+        address: CONTRACTS.insurancePool,
+        abi: insurancePoolAbi,
+        functionName: 'shares',
+        args: [account],
+      }) as bigint
+      if (sharesRaw === BigInt(0)) throw new Error('No shares to withdraw')
+      const hash = await walletClient.writeContract({
+        account,
+        chain: insuraiChain,
+        address: CONTRACTS.insurancePool,
+        abi: insurancePoolAbi,
+        functionName: 'withdraw',
+        args: [sharesRaw],
+      })
+      await publicClient.waitForTransactionReceipt({ hash })
+      await Promise.all([readPoolStats(), readUnderwriterPosition(account)])
+      toast.success('Withdrawn from pool successfully', { id })
+      return hash
+    } catch (err) {
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function claimFees(strategyId: number): Promise<string> {
+    setLoading(true)
+    setLastError('')
+    const id = toast.loading('Claiming subscription fees…')
+    try {
+      const walletClient = wagmiWalletClient ?? await getWalletClient()
+      const [account] = await walletClient.getAddresses()
+      const hash = await walletClient.writeContract({
+        account,
+        chain: insuraiChain,
+        address: CONTRACTS.strategyRegistry,
+        abi: strategyRegistryAbi,
+        functionName: 'claimFees',
+        args: [BigInt(strategyId)],
+      })
+      await publicClient.waitForTransactionReceipt({ hash })
+      await readProviderData(account, strategies)
+      toast.success('Fees claimed successfully', { id })
+      return hash
+    } catch (err) {
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function startCopyTrade(strategy: Strategy, intervalMs?: number) {
     setLoading(true)
     setLastError('')
@@ -715,8 +885,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const body = await res.json() as { error?: string }
       if (!res.ok) throw new Error(body.error ?? 'Failed to start copy trade')
       await refreshCopyTrade()
+      toast.success(`Scheduler started — ${strategy.name}`)
     } catch (err) {
-      setLastError((err as Error).message)
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
       throw err
     } finally {
       setLoading(false)
@@ -735,8 +908,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const body = await res.json() as { error?: string }
       if (!res.ok) throw new Error(body.error ?? 'Failed to stop copy trade')
       await refreshCopyTrade()
+      toast.success('Scheduler stopped')
     } catch (err) {
-      setLastError((err as Error).message)
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
       throw err
     } finally {
       setLoading(false)
@@ -746,6 +922,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function runCopyTradeNow(strategy: Strategy): Promise<CopyTradeFeedEntry | null> {
     setLoading(true)
     setLastError('')
+    const id = toast.loading(`Running ${strategy.name}…`)
     try {
       const res = await fetch(`${API_BASE_URL}/api/copy-trade/run-now`, {
         method: 'POST',
@@ -755,9 +932,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const body = await res.json() as { entry?: CopyTradeFeedEntry; error?: string }
       if (!res.ok) throw new Error(body.error ?? 'Run failed')
       await Promise.all([refreshCopyTrade(), refreshChainData()])
-      return body.entry ?? null
+      const entry = body.entry
+      if (entry) {
+        const sign = entry.tradeReturn >= 0 ? '+' : ''
+        toast.success(`Signal: ${entry.action.toUpperCase()} ${sign}${(entry.tradeReturn / 100).toFixed(2)}%`, { id })
+      } else {
+        toast.success('Run complete', { id })
+      }
+      return entry ?? null
     } catch (err) {
-      setLastError((err as Error).message)
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function registerStrategy(input: RegisterStrategyInput): Promise<number> {
+    setLoading(true)
+    setLastError('')
+    const id = toast.loading('Registering strategy on-chain…')
+    try {
+      const walletClient = wagmiWalletClient ?? await getWalletClient()
+      const [account] = await walletClient.getAddresses()
+      setWalletConnected(true)
+      setWalletAddress(shortAddress(account))
+      setWalletAccount(account)
+
+      const configHash = keccak256(toHex(stringToBytes(`${input.name}:${input.description}`)))
+      const teeAgentId = keccak256(toHex(stringToBytes(`tee-agent:${input.name}`)))
+      const storageRoot = keccak256(toHex(stringToBytes(`storage-root:${input.name}`)))
+
+      const hash = await walletClient.writeContract({
+        account,
+        chain: insuraiChain,
+        address: CONTRACTS.strategyRegistry,
+        abi: strategyRegistryAbi,
+        functionName: 'registerStrategy',
+        args: [
+          input.name,
+          input.description,
+          toUsdc(input.subscriptionFeeUsdc),
+          BigInt(input.riskScore),
+          teeAgentId,
+          storageRoot,
+          configHash,
+        ],
+      })
+      await publicClient.waitForTransactionReceipt({ hash })
+      const loadedStrategies = await readStrategies()
+      const registered = loadedStrategies.find(s => s.name === input.name)
+      if (registered) {
+        fetch(`${API_BASE_URL}/api/copy-trade/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategyId: registered.contractId, strategyName: registered.name }),
+        }).then(() => refreshCopyTrade()).catch(() => {})
+      }
+      toast.success(`"${input.name}" is now live in the marketplace`, { id })
+      return registered?.contractId ?? 0
+    } catch (err) {
+      const msg = (err as Error).message
+      setLastError(msg)
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
       throw err
     } finally {
       setLoading(false)
@@ -780,6 +1019,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshCopyTrade()
+    const id = setInterval(refreshCopyTrade, 30_000)
+    return () => clearInterval(id)
   }, [refreshCopyTrade])
 
   useEffect(() => {
@@ -789,6 +1030,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setWalletAddress(shortAddress(address))
         setWalletAccount(address)
         refreshChainData(address)
+        readUnderwriterPosition(address).catch(() => {})
         return
       }
 
@@ -796,6 +1038,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setWalletAddress('')
       setWalletAccount(null)
       setPolicies([])
+      setUnderwriterShares(0)
+      setUnderwriterShareValue(0)
+      setProviderStrategyIds([])
+      setPendingFeesByStrategy({})
     })
   }, [isConnected, address, refreshChainData])
 
@@ -830,6 +1076,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         stopCopyTrade,
         runCopyTradeNow,
         refreshCopyTrade,
+        registerStrategy,
+        underwriterShares,
+        underwriterShareValue,
+        providerStrategyIds,
+        pendingFeesByStrategy,
+        withdrawFromPool,
+        claimFees,
       }}
     >
       {children}

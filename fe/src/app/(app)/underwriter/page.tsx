@@ -5,7 +5,10 @@ import Image from 'next/image'
 import { useApp } from '@/context/AppContext'
 
 export default function UnderwriterPage() {
-  const { policies, poolStats, depositToPool, loading } = useApp()
+  const { policies, poolStats, depositToPool, withdrawFromPool, underwriterShares, underwriterShareValue, loading } = useApp()
+  const [withdrawn, setWithdrawn] = useState(false)
+
+  const yieldEarned = Math.max(0, underwriterShareValue - underwriterShares)
   const [depositAmount, setDepositAmount] = useState('10000')
   const [deposited, setDeposited]         = useState(false)
 
@@ -161,6 +164,46 @@ export default function UnderwriterPage() {
               <span>Exposure: ${exposure.toLocaleString()}</span>
               <span>TVL: ${tvl.toLocaleString()}</span>
             </div>
+          </div>
+
+          {/* My position */}
+          <div className="card-gb p-5">
+            <p className="mb-4 text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">My Position</p>
+            {underwriterShares > 0 ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[#0d1018] p-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">Deposited</p>
+                    <p className="mt-0.5 text-sm font-black text-[#d8d0c4]">${underwriterShares.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-[#0d1018] p-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">Current Value</p>
+                    <p className="mt-0.5 text-sm font-black text-[#d8d0c4]">${underwriterShareValue.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="bg-[#0d1018] p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">Yield Earned</p>
+                    <p className={`mt-0.5 text-sm font-black ${yieldEarned > 0 ? 'text-[#22c55e]' : 'text-[#374151]'}`}>
+                      +${yieldEarned.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                {withdrawn ? (
+                  <p className="text-center text-sm font-black text-[#22c55e]">Withdrawn successfully</p>
+                ) : (
+                  <button
+                    onClick={async () => { await withdrawFromPool(); setWithdrawn(true) }}
+                    disabled={loading}
+                    className="w-full border border-[#b83227]/40 bg-[#1a0808] py-2.5 text-sm font-black text-[#b83227] transition-colors hover:border-[#b83227]/70 disabled:opacity-40"
+                  >
+                    {loading ? 'Withdrawing…' : 'Withdraw All'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="py-4 text-center text-xs font-bold text-[#374151]">No position yet.</p>
+            )}
           </div>
 
           {/* Exposure by strategy */}

@@ -1,11 +1,21 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
-import { useApp } from '@/context/AppContext'
+import { useApp, CopyTradeScheduler, RegisterStrategyInput } from '@/context/AppContext'
 import { Strategy } from '@/lib/data'
 
-function StrategyCard({ strategy }: { strategy: Strategy }) {
+
+function StrategyCard({ strategy, scheduler }: { strategy: Strategy; scheduler: CopyTradeScheduler | undefined }) {
   const { openWizard } = useApp()
+
+  const actionColor = scheduler?.lastAction === 'buy'
+    ? 'text-[#22c55e]'
+    : scheduler?.lastAction === 'sell'
+      ? 'text-[#b83227]'
+      : 'text-[#cfa45b]'
+
+  const returnColor = (scheduler?.lastReturn ?? 0) >= 0 ? 'text-[#22c55e]' : 'text-[#b83227]'
 
   return (
     <article className="card-gb group relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
@@ -59,6 +69,22 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
           </div>
         </div>
 
+        {/* Last Signal */}
+        <div className="mt-4 grid grid-cols-2 gap-1.5">
+          <div className="bg-[#0d1018] p-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">Signal</p>
+            <p className={`mt-0.5 text-sm font-black uppercase ${scheduler?.lastAction ? actionColor : 'text-[#374151]'}`}>
+              {scheduler?.lastAction ?? '—'}
+            </p>
+          </div>
+          <div className="bg-[#0d1018] p-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">Return</p>
+            <p className={`mt-0.5 text-sm font-black ${scheduler?.lastReturn != null ? returnColor : 'text-[#374151]'}`}>
+              {scheduler?.lastReturn != null ? `${scheduler.lastReturn > 0 ? '+' : ''}${scheduler.lastReturn}bps` : '—'}
+            </p>
+          </div>
+        </div>
+
         {/* TEE Agent ID */}
         <div className="mt-4 border border-[#1e2330] bg-[#0d1018] p-3">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#374151]">TEE Agent ID</p>
@@ -79,7 +105,23 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
 }
 
 export default function MarketplacePage() {
-  const { strategies } = useApp()
+  const { strategies, copyTradeSchedulers, registerStrategy, loading } = useApp()
+
+  const [showForm, setShowForm] = useState(false)
+  const [done, setDone]         = useState(false)
+  const [form, setForm] = useState<RegisterStrategyInput>({
+    name: '',
+    description: '',
+    subscriptionFeeUsdc: 10,
+    riskScore: 25,
+  })
+
+  async function handleRegister() {
+    if (!form.name || !form.description) return
+    await registerStrategy(form)
+    setDone(true)
+    setForm({ name: '', description: '', subscriptionFeeUsdc: 10, riskScore: 25 })
+  }
 
   return (
     <div>
@@ -113,6 +155,96 @@ export default function MarketplacePage() {
           <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-[#4a5568]">
             Every strategy runs inside a 0G Compute TEE. Logic is sealed — you verify results, not code.
           </p>
+        </div>
+      </div>
+
+      {/* List your strategy */}
+      <div className="mb-8 card-gb p-6">
+        <button
+          onClick={() => { setShowForm(v => !v); setDone(false) }}
+          className="flex w-full items-center justify-between"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.22em] text-[#cfa45b]">
+              <span className="h-px w-4 bg-[#cfa45b]/55" /> List Your Strategy
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-[#4a5568]">Register your own AI strategy and earn subscription fees.</p>
+          </div>
+          <span
+            className="shrink-0 text-[#374151] transition-transform duration-300"
+            style={{ display: 'inline-block', transform: showForm ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >▼</span>
+        </button>
+
+        <div className={`grid transition-all duration-300 ease-in-out ${showForm ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+          <div className="overflow-hidden">
+          <div className="mt-6">
+            {done ? (
+              <div className="border border-[#22c55e]/20 bg-[#051209] p-5 text-center">
+                <p className="text-base font-black text-[#22c55e]">Strategy registered on-chain</p>
+                <p className="mt-1 text-xs font-medium text-[#22c55e]/60">It&apos;s now live below.</p>
+                <button onClick={() => setDone(false)} className="mt-3 text-sm font-black text-[#cfa45b] hover:text-[#e8b96a]">
+                  Register another →
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">Name</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="My Alpha Strategy"
+                      className="w-full border border-[#1e2330] bg-[#0d1018] px-4 py-3 text-sm font-black text-[#d8d0c4] placeholder-[#2d3748] outline-none focus:border-[#cfa45b]/30"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">Sub Fee (USDC)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={form.subscriptionFeeUsdc}
+                        onChange={e => setForm(f => ({ ...f, subscriptionFeeUsdc: Number(e.target.value) }))}
+                        className="w-full border border-[#1e2330] bg-[#0d1018] px-4 py-3 text-sm font-black text-[#d8d0c4] outline-none focus:border-[#cfa45b]/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">Risk (1–100)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={form.riskScore}
+                        onChange={e => setForm(f => ({ ...f, riskScore: Math.min(100, Math.max(1, Number(e.target.value))) }))}
+                        className="w-full border border-[#1e2330] bg-[#0d1018] px-4 py-3 text-sm font-black text-[#d8d0c4] outline-none focus:border-[#cfa45b]/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">Description</label>
+                  <textarea
+                    rows={2}
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Describe the strategy's logic and focus..."
+                    className="w-full resize-none border border-[#1e2330] bg-[#0d1018] px-4 py-3 text-sm font-medium text-[#d8d0c4] placeholder-[#2d3748] outline-none focus:border-[#cfa45b]/30"
+                  />
+                </div>
+                <button
+                  onClick={handleRegister}
+                  disabled={loading || !form.name || !form.description}
+                  className="btn-shimmer bg-[#b83227] px-8 py-3 text-sm font-black text-white shadow-[0_14px_30px_rgba(184,50,39,0.28)] disabled:opacity-40"
+                >
+                  {loading ? 'Registering on-chain…' : 'Register Strategy'}
+                </button>
+              </div>
+            )}
+          </div>
+          </div>
         </div>
       </div>
 
@@ -153,7 +285,11 @@ export default function MarketplacePage() {
         {/* Strategy grid */}
         <div className="flex-1 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {strategies.map(s => (
-            <StrategyCard key={s.id} strategy={s} />
+            <StrategyCard
+              key={s.id}
+              strategy={s}
+              scheduler={copyTradeSchedulers.find(sc => sc.strategyId === s.contractId)}
+            />
           ))}
         </div>
       </div>

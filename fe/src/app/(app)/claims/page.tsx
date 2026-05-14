@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useApp, Policy } from '@/context/AppContext'
+import { explorerTx } from '@/lib/chain'
 
 const CLAIM_STEPS = ['Loss Triggered', 'Attestation Verified', 'Payout Executed']
 
@@ -103,9 +104,12 @@ function ClaimCard({ policy }: { policy: Policy }) {
                 <span className="font-mono text-[10px] font-black text-[#6b7280]">{v}</span>
               </div>
             ))}
-            <button className="mt-1 text-[10px] font-black text-[#cfa45b]/60 hover:text-[#cfa45b] transition-colors">
-              View on 0G Explorer ↗
-            </button>
+            {relatedAtt.txHash && (
+              <a href={explorerTx(relatedAtt.txHash)} target="_blank" rel="noopener noreferrer"
+                className="mt-1 inline-block text-[10px] font-black text-[#cfa45b]/60 hover:text-[#cfa45b] transition-colors">
+                View on 0G Explorer ↗
+              </a>
+            )}
           </div>
         )}
 

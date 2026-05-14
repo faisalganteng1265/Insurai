@@ -28,6 +28,10 @@ export const CONTRACTS = {
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'
 
+export const EXPLORER_BASE = 'https://chainscan-galileo.0g.ai'
+export function explorerTx(hash: string) { return `${EXPLORER_BASE}/tx/${hash}` }
+export function explorerAddress(addr: string) { return `${EXPLORER_BASE}/address/${addr}` }
+
 export const publicClient = createPublicClient({
   chain: insuraiChain,
   transport: http(insuraiChain.rpcUrls.default.http[0]),
@@ -38,6 +42,11 @@ export const strategyRegistryAbi = parseAbi([
   'function getStrategy(uint256 strategyId) external view returns ((uint256,address,string,string,uint256,uint256,bool,uint256,uint256,bytes32,bytes32,bytes32))',
   'function getAttestations(uint256 strategyId) external view returns ((bytes32,bytes32,bytes32,int256,uint256,uint256)[])',
   'function isActiveSubscriber(uint256 strategyId, address copier) external view returns (bool)',
+  'function strategyCount() external view returns (uint256)',
+  'function registerStrategy(string name, string description, uint256 subscriptionFee, uint256 riskScore, bytes32 teeAgentId, bytes32 strategyStorageRoot, bytes32 strategyConfigHash) external returns (uint256)',
+  'function getProviderStrategies(address provider) external view returns (uint256[])',
+  'function claimFees(uint256 strategyId) external',
+  'function pendingFees(uint256 strategyId) external view returns (uint256)',
 ])
 
 export const policyManagerAbi = parseAbi([
@@ -49,7 +58,10 @@ export const policyManagerAbi = parseAbi([
 
 export const insurancePoolAbi = parseAbi([
   'function deposit(uint256 amount) external',
+  'function withdraw(uint256 shareAmount) external',
   'function poolStats() external view returns (uint256 totalDeposits, uint256 premiumsCollected, uint256 claimsPaid, uint256 available, uint256 utilizationBps)',
+  'function shares(address underwriter) external view returns (uint256)',
+  'function shareValue(address underwriter) external view returns (uint256)',
 ])
 
 export const demoUsdcAbi = parseAbi([

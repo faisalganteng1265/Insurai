@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useApp, Policy, CopyTradeFeedEntry } from '@/context/AppContext'
+import { explorerTx } from '@/lib/chain'
 
 const STATUS_LABEL: Record<Policy['status'], string> = {
   active: 'Active',
@@ -93,11 +94,20 @@ function FeedCard({ entry, isFollowing }: { entry: CopyTradeFeedEntry; isFollowi
           <p className="mt-1 text-[10px] font-medium leading-4 text-[#374151] line-clamp-2">{entry.reasoning}</p>
         </div>
       </div>
-      {isFollowing && (
-        <div className="mt-2 ml-12">
-          <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#cfa45b]/70">Following</span>
-        </div>
-      )}
+      <div className="mt-2 ml-12 flex items-center gap-3">
+        {isFollowing && (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+            <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#22c55e]">Auto Copied</span>
+          </>
+        )}
+        {entry.txHash && (
+          <a href={explorerTx(entry.txHash)} target="_blank" rel="noopener noreferrer"
+            className="text-[9px] font-black uppercase tracking-[0.1em] text-[#cfa45b]/60 hover:text-[#cfa45b]">
+            0G Explorer →
+          </a>
+        )}
+      </div>
     </div>
   )
 }
@@ -111,6 +121,12 @@ export default function PortfolioPage() {
   const followedStrategyIds = new Set(
     policies.filter(p => p.status === 'active').map(p => p.contractStrategyId)
   )
+
+  const realizedPnlBps = copyTradeFeed
+    .filter(e => followedStrategyIds.has(e.strategyId))
+    .reduce((sum, e) => sum + e.tradeReturn, 0)
+  const realizedPnlPct = (realizedPnlBps / 100).toFixed(2)
+  const pnlPositive = realizedPnlBps >= 0
 
   const feedToShow = copyTradeFeed.length > 0 ? copyTradeFeed : []
 
@@ -166,7 +182,7 @@ export default function PortfolioPage() {
           ['Active Policies', policies.length, ''],
           ['Total Coverage', `$${totalCoverage.toLocaleString()}`, ''],
           ['Premium Paid', `$${totalPremium}`, ''],
-          ['P&L', triggeredPolicies.length > 0 ? '−$300' : '+$920', triggeredPolicies.length > 0 ? 'text-[#cfa45b]' : 'text-[#22c55e]'],
+          ['Copy P&L', `${pnlPositive ? '+' : ''}${realizedPnlPct}%`, pnlPositive ? 'text-[#22c55e]' : 'text-[#b83227]'],
         ].map(([label, value, extra]) => (
           <div key={label} className="card-gb p-5">
             <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#374151]">{label}</p>
@@ -239,6 +255,12 @@ export default function PortfolioPage() {
                   </div>
                   <p className="text-[10px] font-bold text-[#2d3748]">{att.timestamp}</p>
                   <p className="mt-1 font-mono text-[9px] text-[#1e2330]">{att.teeId}</p>
+                  {att.txHash && (
+                    <a href={explorerTx(att.txHash)} target="_blank" rel="noopener noreferrer"
+                      className="mt-1 inline-block text-[9px] font-black uppercase tracking-[0.1em] text-[#cfa45b]/60 hover:text-[#cfa45b]">
+                      View on 0G Explorer →
+                    </a>
+                  )}
                 </div>
               ))}
               {attestations.length === 0 && (

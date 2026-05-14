@@ -187,13 +187,16 @@ export function startSchedule(
     lastError: null,
   };
 
-  const timer = setInterval(() => {
-    executeRun(strategyId, strategyName).catch(err =>
-      console.error(`[scheduler] Unhandled error in strategy ${strategyId}:`, err)
-    );
-  }, intervalMs);
+  const run = () => executeRun(strategyId, strategyName).catch(err =>
+    console.error(`[scheduler] Unhandled error in strategy ${strategyId}:`, err)
+  );
 
+  const timer = setInterval(run, intervalMs);
   schedules.set(strategyId, { info, timer });
+
+  // fire immediately so there's data right away
+  run();
+
   console.log(`[scheduler] Started ${strategyName} (id=${strategyId}) every ${intervalMs / 60000}min`);
   return { ...info };
 }

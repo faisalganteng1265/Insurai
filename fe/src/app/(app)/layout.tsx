@@ -8,6 +8,7 @@ import { AppProvider, useApp } from '@/context/AppContext'
 import { Web3Provider } from '@/context/Web3Provider'
 import PolicyWizardModal from '@/components/PolicyWizardModal'
 import EmberParticles from '@/components/EmberParticles'
+import { Toaster } from 'sonner'
 
 const TABS = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -127,6 +128,19 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {wizardOpen && <PolicyWizardModal />}
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: '#0d1018',
+            border: '1px solid #1e2330',
+            color: '#d8d0c4',
+            fontSize: '13px',
+            fontWeight: '700',
+          },
+        }}
+      />
     </div>
   )
 }
