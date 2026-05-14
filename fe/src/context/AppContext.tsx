@@ -514,6 +514,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const loadedPolicies = await readPolicies(account)
       await readPoolStats()
 
+      // Auto-start copy trade scheduler if not already running
+      fetch(`${API_BASE_URL}/api/copy-trade/status`)
+        .then(r => r.json() as Promise<{ schedulers: CopyTradeScheduler[] }>)
+        .then(data => {
+          const alreadyRunning = data.schedulers.some(
+            s => s.strategyId === strategy.contractId && s.isRunning
+          )
+          if (!alreadyRunning) {
+            return fetch(`${API_BASE_URL}/api/copy-trade/start`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ strategyId: strategy.contractId, strategyName: strategy.name }),
+            })
+          }
+        })
+        .then(() => refreshCopyTrade())
+        .catch(() => { /* non-blocking */ })
+
       const fallbackPolicy: Policy = {
         id: `POL-0G-${Date.now().toString().slice(-5)}`,
         strategyId: strategy.id,
