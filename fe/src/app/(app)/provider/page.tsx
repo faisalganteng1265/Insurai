@@ -4,12 +4,15 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useApp } from '@/context/AppContext'
 import { explorerTx } from '@/lib/chain'
+import ConnectWalletPrompt from '@/components/ConnectWalletPrompt'
 
 export default function ProviderPage() {
   const {
     runStrategy, forceLossAttestation, attestations, strategies, loading,
-    providerStrategyIds, pendingFeesByStrategy, claimFees,
+    providerStrategyIds, pendingFeesByStrategy, claimFees, walletConnected,
   } = useApp()
+
+  if (!walletConnected) return <ConnectWalletPrompt message="Connect your wallet to access the provider dashboard and submit attestations." />
 
   const providerStrategies = strategies.filter(s => providerStrategyIds.includes(s.contractId))
   const totalPendingFees = Object.values(pendingFeesByStrategy).reduce((a, b) => a + b, 0)

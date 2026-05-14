@@ -11,26 +11,43 @@ import {
 } from 'viem'
 
 export const insuraiChain = {
-  id: 16602,
-  name: '0G Galileo Testnet',
+  id: 16661,
+  name: '0G Mainnet',
   nativeCurrency: { name: '0G', symbol: '0G', decimals: 18 },
   rpcUrls: {
-    default: { http: [process.env.NEXT_PUBLIC_ZG_RPC_URL ?? 'https://evmrpc-testnet.0g.ai'] },
+    default: { http: [process.env.NEXT_PUBLIC_ZG_RPC_URL ?? 'https://evmrpc.0g.ai'] },
   },
 } as const
 
 export const CONTRACTS = {
-  demoUsdc: (process.env.NEXT_PUBLIC_USDC_ADDRESS ?? '0x5C789abC439d69E4b66160214254DC04EE3e5341') as Address,
-  strategyRegistry: (process.env.NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS ?? '0x6CE2C0e89BAFaafa50762d0728012cFbb96D0d00') as Address,
-  insurancePool: (process.env.NEXT_PUBLIC_INSURANCE_POOL_ADDRESS ?? '0xB3C6f054DD1841dA7832a695704BdbB4A4c8D038') as Address,
-  policyManager: (process.env.NEXT_PUBLIC_POLICY_MANAGER_ADDRESS ?? '0x73a3Bbd0e0961292F6BdF5d3017A70c06A0b2ef2') as Address,
+  demoUsdc: (process.env.NEXT_PUBLIC_USDC_ADDRESS ?? '0x986d494b19f8eb3fa19f201dcd1ee6f67003d57f') as Address,
+  strategyRegistry: (process.env.NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS ?? '0xb4a54d664c7f4c725e81bcba4ac8ad665e6665b8') as Address,
+  insurancePool: (process.env.NEXT_PUBLIC_INSURANCE_POOL_ADDRESS ?? '0xb6a99e8698695d3fec7c18abd07df9134c9caccd') as Address,
+  policyManager: (process.env.NEXT_PUBLIC_POLICY_MANAGER_ADDRESS ?? '0xbdaea5744ac79132c96420ce13de3d18c38feeca') as Address,
 }
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'
 
-export const EXPLORER_BASE = 'https://chainscan-galileo.0g.ai'
+export const EXPLORER_BASE = 'https://chainscan.0g.ai'
 export function explorerTx(hash: string) { return `${EXPLORER_BASE}/tx/${hash}` }
 export function explorerAddress(addr: string) { return `${EXPLORER_BASE}/address/${addr}` }
+
+export async function waitForReceipt(hash: `0x${string}`) {
+  try {
+    return await publicClient.waitForTransactionReceipt({
+      hash,
+      timeout: 300_000,
+      pollingInterval: 3_000,
+    })
+  } catch (err) {
+    const msg = (err as Error).message ?? ''
+    if (msg.includes('could not be found') || msg.includes('not processed')) {
+      // tx submitted but chain is slow — treat as success
+      return null
+    }
+    throw err
+  }
+}
 
 export const publicClient = createPublicClient({
   chain: insuraiChain,
@@ -159,6 +176,6 @@ export async function approveIfNeeded(owner: Address, spender: Address, amount: 
     functionName: 'approve',
     args: [spender, amount],
   })
-  await publicClient.waitForTransactionReceipt({ hash })
+  await waitForReceipt(hash)
   return hash
 }

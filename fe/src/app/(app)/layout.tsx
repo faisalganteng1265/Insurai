@@ -21,7 +21,7 @@ const TABS = [
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { walletConnected, activeRole, setRole, wizardOpen, policies, claimDemoUsdc, loading, lastError } = useApp()
+  const { walletConnected, wizardOpen, policies, claimDemoUsdc, loading, lastError, demoUsdcBalance } = useApp()
   const hasTriggeredClaim = policies.some(p => p.status === 'triggered')
 
   return (
@@ -85,22 +85,18 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex shrink-0 items-center gap-2">
               {walletConnected && (
                 <>
+                  <div className="hidden items-center gap-1.5 rounded-full border border-[#1e2330] bg-[#0d1018] px-3 py-1.5 md:flex">
+                    <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[#374151]">dUSDC</span>
+                    <span className="text-[10px] font-black text-[#cfa45b]">${demoUsdcBalance.toLocaleString()}</span>
+                  </div>
                   <button
                     onClick={claimDemoUsdc}
                     disabled={loading}
+                    title="Claim 10,000 free dUSDC for testing"
                     className="hidden rounded-full border border-[#1e2330] bg-[#0d1018] px-3 py-1.5 text-[10px] font-black text-[#4a5568] transition-colors hover:border-[#cfa45b]/20 hover:text-[#7f8794] disabled:opacity-40 md:block"
                   >
-                    Faucet
+                    Get dUSDC
                   </button>
-                  <select
-                    value={activeRole}
-                    onChange={e => setRole(e.target.value as 'copier' | 'provider' | 'underwriter')}
-                    className="hidden rounded-full border border-[#1e2330] bg-[#0d1018] px-3 py-1.5 text-[10px] font-black text-[#4a5568] outline-none sm:block"
-                  >
-                    <option value="copier">Copier</option>
-                    <option value="provider">Provider</option>
-                    <option value="underwriter">Underwriter</option>
-                  </select>
                 </>
               )}
               <ConnectButton

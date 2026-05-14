@@ -5,6 +5,7 @@ import type { Address } from 'viem'
 import { useAccount, useWalletClient } from 'wagmi'
 import { keccak256, toHex, stringToBytes } from 'viem'
 import { toast } from 'sonner'
+import { friendlyError } from '@/lib/friendlyError'
 import { Strategy, STRATEGY_ACCENTS } from '@/lib/data'
 import {
   API_BASE_URL,
@@ -21,6 +22,7 @@ import {
   strategyRegistryAbi,
   toUsdc,
   insuraiChain,
+  waitForReceipt,
 } from '@/lib/chain'
 
 export type CopyTradeScheduler = {
@@ -116,6 +118,7 @@ type AppContextType = {
   underwriterShareValue: number
   providerStrategyIds: number[]
   pendingFeesByStrategy: Record<number, number>
+  demoUsdcBalance: number
   connectWallet: () => Promise<void>
   setRole: (role: 'copier' | 'provider' | 'underwriter') => void
   openWizard: (strategy: Strategy) => void
@@ -341,6 +344,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [underwriterShareValue, setUnderwriterShareValue] = useState(0)
   const [providerStrategyIds, setProviderStrategyIds] = useState<number[]>([])
   const [pendingFeesByStrategy, setPendingFeesByStrategy] = useState<Record<number, number>>({})
+  const [demoUsdcBalance, setDemoUsdcBalance] = useState(0)
   const { address, isConnected } = useAccount()
   const { data: wagmiWalletClient } = useWalletClient()
 
@@ -482,6 +486,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return loaded
   }, [])
 
+  const readDemoUsdcBalance = useCallback(async (account: Address) => {
+    try {
+      const raw = await publicClient.readContract({
+        address: CONTRACTS.demoUsdc,
+        abi: demoUsdcAbi,
+        functionName: 'balanceOf',
+        args: [account],
+      })
+      setDemoUsdcBalance(fromUsdc(raw as bigint))
+    } catch { /* silent — don't flash 0 on error */ }
+  }, [])
+
   const readUnderwriterPosition = useCallback(async (account: Address) => {
     const [sharesRaw, valueRaw] = await Promise.all([
       publicClient.readContract({ address: CONTRACTS.insurancePool, abi: insurancePoolAbi, functionName: 'shares', args: [account] }),
@@ -524,11 +540,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await readPolicies(account, loadedStrategies)
         readProviderData(account, loadedStrategies).catch(() => {})
         readUnderwriterPosition(account).catch(() => {})
+        readDemoUsdcBalance(account).catch(() => {})
       }
     } catch (err) {
       setLastError((err as Error).message)
     }
-  }, [readAttestations, readPolicies, readPoolStats, readStrategies, readProviderData, readUnderwriterPosition, walletAccount])
+  }, [readAttestations, readPolicies, readPoolStats, readStrategies, readProviderData, readUnderwriterPosition, readDemoUsdcBalance, walletAccount])
 
   async function createPolicyOnChain({ strategy, coverage, threshold }: CreatePolicyInput) {
     setLoading(true)
@@ -576,7 +593,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           functionName: 'subscribe',
           args: [BigInt(strategy.contractId)],
         })
-        await publicClient.waitForTransactionReceipt({ hash: subscribeHash })
+        await waitForReceipt(subscribeHash)
       }
 
       const premium = await publicClient.readContract({
@@ -596,28 +613,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'createPolicy',
         args: [BigInt(strategy.contractId), coverageAmount, thresholdBps],
       })
-      await publicClient.waitForTransactionReceipt({ hash: policyHash })
-
-      const loadedPolicies = await readPolicies(account, strategies)
-      await readPoolStats()
-
-      // Auto-start copy trade scheduler if not already running
-      fetch(`${API_BASE_URL}/api/copy-trade/status`)
-        .then(r => r.json() as Promise<{ schedulers: CopyTradeScheduler[] }>)
-        .then(data => {
-          const alreadyRunning = data.schedulers.some(
-            s => s.strategyId === strategy.contractId && s.isRunning
-          )
-          if (!alreadyRunning) {
-            return fetch(`${API_BASE_URL}/api/copy-trade/start`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ strategyId: strategy.contractId, strategyName: strategy.name }),
-            })
-          }
-        })
-        .then(() => refreshCopyTrade())
-        .catch(() => { /* non-blocking */ })
+      await waitForReceipt(policyHash)
 
       const fallbackPolicy: Policy = {
         id: `POL-0G-${Date.now().toString().slice(-5)}`,
@@ -633,12 +629,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
         expiresIn: '30 days',
         txHash: policyHash,
       }
+
+      // non-blocking: refresh data + auto-start scheduler
+      readPolicies(account, strategies).catch(() => {})
+      readPoolStats().catch(() => {})
+      fetch(`${API_BASE_URL}/api/copy-trade/status`)
+        .then(r => r.json() as Promise<{ schedulers: CopyTradeScheduler[] }>)
+        .then(data => {
+          const alreadyRunning = data.schedulers.some(
+            s => s.strategyId === strategy.contractId && s.isRunning
+          )
+          if (!alreadyRunning) {
+            return fetch(`${API_BASE_URL}/api/copy-trade/start`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ strategyId: strategy.contractId, strategyName: strategy.name }),
+            })
+          }
+        })
+        .then(() => refreshCopyTrade())
+        .catch(() => {})
+
       toast.success(`Policy created — $${coverage.toLocaleString()} covered`, { id })
-      return loadedPolicies[loadedPolicies.length - 1] ?? fallbackPolicy
+      return fallbackPolicy
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
-      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
+      toast.error(friendlyError(message), { id })
       throw err
     } finally {
       setLoading(false)
@@ -677,7 +694,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
-      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
+      toast.error(friendlyError(message), { id })
       throw err
     } finally {
       setLoading(false)
@@ -715,7 +732,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const message = (err as Error).message
       setLastError(message)
-      toast.error(message.length > 80 ? message.slice(0, 80) + '…' : message, { id })
+      toast.error(friendlyError(message), { id })
       throw err
     } finally {
       setLoading(false)
@@ -747,8 +764,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         abi: demoUsdcAbi,
         functionName: 'claimDemoUsdc',
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
       toast.success('dUSDC claimed successfully', { id })
+      readDemoUsdcBalance(account).catch(() => {})
       return hash
     } catch (err) {
       setLastError((err as Error).message)
@@ -775,14 +793,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'deposit',
         args: [usdcAmount],
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
       await readPoolStats()
       toast.success(`$${amount.toLocaleString()} USDC deposited to pool`)
       return hash
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
+      toast.error(friendlyError(msg))
       throw err
     } finally {
       setLoading(false)
@@ -803,10 +821,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const data = await feedRes.json() as { feed: CopyTradeFeedEntry[] }
         setCopyTradeFeed(data.feed ?? [])
       }
+      // silently refresh balance alongside copy trade poll
+      if (walletAccount) readDemoUsdcBalance(walletAccount)
     } catch {
       // non-critical — backend may not be running
     }
-  }, [])
+  }, [walletAccount, readDemoUsdcBalance])
 
   async function withdrawFromPool(): Promise<string> {
     setLoading(true)
@@ -830,14 +850,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'withdraw',
         args: [sharesRaw],
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
       await Promise.all([readPoolStats(), readUnderwriterPosition(account)])
       toast.success('Withdrawn from pool successfully', { id })
       return hash
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      toast.error(friendlyError(msg), { id })
       throw err
     } finally {
       setLoading(false)
@@ -859,14 +879,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         functionName: 'claimFees',
         args: [BigInt(strategyId)],
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
       await readProviderData(account, strategies)
       toast.success('Fees claimed successfully', { id })
       return hash
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      toast.error(friendlyError(msg), { id })
       throw err
     } finally {
       setLoading(false)
@@ -889,7 +909,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
+      toast.error(friendlyError(msg))
       throw err
     } finally {
       setLoading(false)
@@ -912,7 +932,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg)
+      toast.error(friendlyError(msg))
       throw err
     } finally {
       setLoading(false)
@@ -943,7 +963,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      toast.error(friendlyError(msg), { id })
       throw err
     } finally {
       setLoading(false)
@@ -981,7 +1001,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           configHash,
         ],
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
       const loadedStrategies = await readStrategies()
       const registered = loadedStrategies.find(s => s.name === input.name)
       if (registered) {
@@ -996,7 +1016,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const msg = (err as Error).message
       setLastError(msg)
-      toast.error(msg.length > 80 ? msg.slice(0, 80) + '…' : msg, { id })
+      toast.error(friendlyError(msg), { id })
       throw err
     } finally {
       setLoading(false)
@@ -1024,6 +1044,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshCopyTrade])
 
   useEffect(() => {
+    const id = setInterval(() => {
+      readPoolStats().catch(() => {})
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [readPoolStats])
+
+  useEffect(() => {
     queueMicrotask(() => {
       if (isConnected && address) {
         setWalletConnected(true)
@@ -1031,6 +1058,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setWalletAccount(address)
         refreshChainData(address)
         readUnderwriterPosition(address).catch(() => {})
+        readDemoUsdcBalance(address).catch(() => {})
         return
       }
 
@@ -1040,6 +1068,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPolicies([])
       setUnderwriterShares(0)
       setUnderwriterShareValue(0)
+      setDemoUsdcBalance(0)
       setProviderStrategyIds([])
       setPendingFeesByStrategy({})
     })
@@ -1081,6 +1110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         underwriterShareValue,
         providerStrategyIds,
         pendingFeesByStrategy,
+        demoUsdcBalance,
         withdrawFromPool,
         claimFees,
       }}

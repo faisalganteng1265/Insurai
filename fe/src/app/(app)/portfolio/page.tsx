@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useApp, Policy, CopyTradeFeedEntry } from '@/context/AppContext'
 import { explorerTx } from '@/lib/chain'
+import ConnectWalletPrompt from '@/components/ConnectWalletPrompt'
 
 const STATUS_LABEL: Record<Policy['status'], string> = {
   active: 'Active',
@@ -113,7 +114,9 @@ function FeedCard({ entry, isFollowing }: { entry: CopyTradeFeedEntry; isFollowi
 }
 
 export default function PortfolioPage() {
-  const { policies, attestations, copyTradeFeed } = useApp()
+  const { policies, attestations, copyTradeFeed, walletConnected } = useApp()
+
+  if (!walletConnected) return <ConnectWalletPrompt message="Connect your wallet to view your policies and copy trade signals." />
   const triggeredPolicies = policies.filter(p => ['triggered', 'verified', 'paid'].includes(p.status))
   const totalCoverage = policies.reduce((s, p) => s + p.coverage, 0)
   const totalPremium  = policies.reduce((s, p) => s + p.premiumPaid, 0)

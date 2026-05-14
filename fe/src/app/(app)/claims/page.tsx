@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useApp, Policy } from '@/context/AppContext'
 import { explorerTx } from '@/lib/chain'
+import ConnectWalletPrompt from '@/components/ConnectWalletPrompt'
 
 const CLAIM_STEPS = ['Loss Triggered', 'Attestation Verified', 'Payout Executed']
 
@@ -127,7 +128,9 @@ function ClaimCard({ policy }: { policy: Policy }) {
 }
 
 export default function ClaimsPage() {
-  const { policies } = useApp()
+  const { policies, walletConnected } = useApp()
+
+  if (!walletConnected) return <ConnectWalletPrompt message="Connect your wallet to view your insurance claims." />
   const activeClaims = policies.filter(p => ['triggered', 'verified', 'paid'].includes(p.status))
 
   return (

@@ -11,6 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/0G-Chain%20%2B%20Storage%20%2B%20Compute-00D4AA?style=flat-square" alt="0G" />
+  <img src="https://img.shields.io/badge/Network-0G%20Mainnet%20(16661)-00D4AA?style=flat-square" alt="0G Mainnet" />
   <img src="https://img.shields.io/badge/0G-APAC%20Hackathon%202026-00D4AA?style=flat-square" alt="0G APAC" />
   <img src="https://img.shields.io/badge/Track-Agentic%20Economy%20%2F%20Verifiable%20Finance-7C3AED?style=flat-square" alt="Track" />
   <img src="https://img.shields.io/badge/Stack-Next.js%2016%20%2B%20Solidity%20%2B%20Express-111827?style=flat-square" alt="Stack" />
@@ -210,7 +211,7 @@ Submission to the **0G APAC Hackathon** targeting **Track 3: Agentic Economy —
 
 | Hackathon Requirement | Where to Find It |
 |---|---|
-| 0G contract addresses | See [Deployed Contracts](#deployed-contracts--0g-galileo-testnet-chain-id-16602) |
+| 0G contract addresses | See [Deployed Contracts](#deployed-contracts--0g-mainnet-chain-id-16661) |
 | 0G core component integration | Chain + Storage + Compute mapped in [0G Integration](#0g-integration) |
 | Demo flow | Marketplace, policy wizard, provider runner, underwriter pool, claim center |
 | Architecture & docs | This README |
@@ -220,14 +221,14 @@ Submission to the **0G APAC Hackathon** targeting **Track 3: Agentic Economy —
 
 ---
 
-## Deployed Contracts — 0G Galileo Testnet (Chain ID 16602)
+## Deployed Contracts — 0G Mainnet (Chain ID 16661)
 
 | Contract | Address | Purpose |
 |---|---|---|
-| `DemoUSDC` | [`0x5C789abC439d69E4b66160214254DC04EE3e5341`](https://chainscan-galileo.0g.ai/address/0x5C789abC439d69E4b66160214254DC04EE3e5341) | Demo stablecoin used for subscriptions, premiums, deposits, and payouts |
-| `StrategyRegistry` | [`0x6CE2C0e89BAFaafa50762d0728012cFbb96D0d00`](https://chainscan-galileo.0g.ai/address/0x6CE2C0e89BAFaafa50762d0728012cFbb96D0d00) | Strategy metadata, subscriptions, and execution attestations |
-| `InsurancePool` | [`0xB3C6f054DD1841dA7832a695704BdbB4A4c8D038`](https://chainscan-galileo.0g.ai/address/0xB3C6f054DD1841dA7832a695704BdbB4A4c8D038) | Underwriter deposits, premium reserve, utilization, claim payouts |
-| `PolicyManager` | [`0x73a3Bbd0e0961292F6BdF5d3017A70c06A0b2ef2`](https://chainscan-galileo.0g.ai/address/0x73a3Bbd0e0961292F6BdF5d3017A70c06A0b2ef2) | Policy creation, premium calculation, claim trigger, payout routing |
+| `DemoUSDC` | [`0x986d494b19f8eb3fa19f201dcd1ee6f67003d57f`](https://chainscan.0g.ai/address/0x986d494b19f8eb3fa19f201dcd1ee6f67003d57f) | Demo stablecoin used for subscriptions, premiums, deposits, and payouts |
+| `StrategyRegistry` | [`0xb4a54d664c7f4c725e81bcba4ac8ad665e6665b8`](https://chainscan.0g.ai/address/0xb4a54d664c7f4c725e81bcba4ac8ad665e6665b8) | Strategy metadata, subscriptions, and execution attestations |
+| `InsurancePool` | [`0xb6a99e8698695d3fec7c18abd07df9134c9caccd`](https://chainscan.0g.ai/address/0xb6a99e8698695d3fec7c18abd07df9134c9caccd) | Underwriter deposits, premium reserve, utilization, claim payouts |
+| `PolicyManager` | [`0xbdaea5744ac79132c96420ce13de3d18c38feeca`](https://chainscan.0g.ai/address/0xbdaea5744ac79132c96420ce13de3d18c38feeca) | Policy creation, premium calculation, claim trigger, payout routing |
 
 Seed strategy IDs:
 
@@ -291,7 +292,7 @@ cd sc
 forge install
 forge build
 forge test
-forge script script/Deploy.s.sol --rpc-url https://evmrpc-testnet.0g.ai --broadcast
+forge script script/Deploy.s.sol --rpc-url https://evmrpc.0g.ai --broadcast --legacy
 ```
 
 Env:
@@ -315,8 +316,8 @@ npm run dev
 Important env:
 
 ```text
-ZG_CHAIN_ID=16602
-ZG_RPC_URL=https://evmrpc-testnet.0g.ai
+ZG_CHAIN_ID=16661
+ZG_RPC_URL=https://evmrpc.0g.ai
 PROVIDER_PRIVATE_KEY=...
 STRATEGY_REGISTRY_ADDRESS=...
 POLICY_MANAGER_ADDRESS=...
@@ -336,12 +337,12 @@ npm install
 npm run dev
 ```
 
-App runs on `http://localhost:3000` and defaults to 0G Galileo Testnet (`16602`).
+App runs on `http://localhost:3000` and connects to **0G Mainnet** (`16661`).
 
 Optional frontend env:
 
 ```text
-NEXT_PUBLIC_ZG_RPC_URL=https://evmrpc-testnet.0g.ai
+NEXT_PUBLIC_ZG_RPC_URL=https://evmrpc.0g.ai
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
 NEXT_PUBLIC_USDC_ADDRESS=...
 NEXT_PUBLIC_STRATEGY_REGISTRY_ADDRESS=...

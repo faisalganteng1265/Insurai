@@ -3,10 +3,13 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { useApp } from '@/context/AppContext'
+import ConnectWalletPrompt from '@/components/ConnectWalletPrompt'
 
 export default function UnderwriterPage() {
-  const { policies, poolStats, depositToPool, withdrawFromPool, underwriterShares, underwriterShareValue, loading } = useApp()
+  const { policies, poolStats, depositToPool, withdrawFromPool, underwriterShares, underwriterShareValue, loading, walletConnected } = useApp()
   const [withdrawn, setWithdrawn] = useState(false)
+
+  if (!walletConnected) return <ConnectWalletPrompt message="Connect your wallet to deposit liquidity and earn premium yield." />
 
   const yieldEarned = Math.max(0, underwriterShareValue - underwriterShares)
   const [depositAmount, setDepositAmount] = useState('10000')

@@ -4,10 +4,11 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useApp, CopyTradeScheduler, RegisterStrategyInput } from '@/context/AppContext'
 import { Strategy } from '@/lib/data'
+import { toast } from 'sonner'
 
 
 function StrategyCard({ strategy, scheduler }: { strategy: Strategy; scheduler: CopyTradeScheduler | undefined }) {
-  const { openWizard } = useApp()
+  const { openWizard, walletConnected } = useApp()
 
   const actionColor = scheduler?.lastAction === 'buy'
     ? 'text-[#22c55e]'
@@ -94,18 +95,45 @@ function StrategyCard({ strategy, scheduler }: { strategy: Strategy; scheduler: 
 
       <div className="mt-auto p-5 pt-0">
         <button
-          onClick={() => openWizard(strategy)}
-          className="btn-shimmer w-full bg-[#b83227] py-3.5 text-sm font-black text-white shadow-[0_12px_24px_rgba(184,50,39,0.3)] hover:bg-[#c8382c]"
+          onClick={() => walletConnected ? openWizard(strategy) : toast.info('Connect your wallet first to subscribe.')}
+          className={`btn-shimmer w-full py-3.5 text-sm font-black text-white shadow-[0_12px_24px_rgba(184,50,39,0.3)] ${walletConnected ? 'bg-[#b83227] hover:bg-[#c8382c]' : 'cursor-not-allowed bg-[#374151]'}`}
         >
-          Subscribe + Buy Insurance
+          {walletConnected ? 'Subscribe + Buy Insurance' : 'Connect Wallet to Subscribe'}
         </button>
       </div>
     </article>
   )
 }
 
+function SkeletonCard() {
+  return (
+    <div className="card-gb animate-pulse overflow-hidden p-5">
+      <div className="mb-4 flex items-start justify-between">
+        <div className="h-10 w-10 rounded-full bg-white/[0.04]" />
+        <div className="h-6 w-24 bg-white/[0.04]" />
+      </div>
+      <div className="mb-1 h-5 w-3/4 bg-white/[0.04]" />
+      <div className="mb-3 h-3 w-1/3 bg-white/[0.04]" />
+      <div className="mb-1 h-3 w-full bg-white/[0.04]" />
+      <div className="h-3 w-2/3 bg-white/[0.04]" />
+      <div className="mt-4 grid grid-cols-2 gap-1.5">
+        {[0,1,2,3].map(i => <div key={i} className="h-12 bg-white/[0.04]" />)}
+      </div>
+      <div className="mt-4 h-1 bg-white/[0.04]" />
+      <div className="mt-4 h-16 bg-white/[0.04]" />
+      <div className="mt-4 grid grid-cols-2 gap-1.5">
+        <div className="h-12 bg-white/[0.04]" />
+        <div className="h-12 bg-white/[0.04]" />
+      </div>
+      <div className="mt-4 h-12 bg-white/[0.04]" />
+      <div className="mt-4 h-12 bg-[#b83227]/20" />
+    </div>
+  )
+}
+
 export default function MarketplacePage() {
   const { strategies, copyTradeSchedulers, registerStrategy, loading } = useApp()
+  const isLoadingStrategies = strategies.length === 0
 
   const [showForm, setShowForm] = useState(false)
   const [done, setDone]         = useState(false)
@@ -156,6 +184,23 @@ export default function MarketplacePage() {
             Every strategy runs inside a 0G Compute TEE. Logic is sealed — you verify results, not code.
           </p>
         </div>
+      </div>
+
+      {/* Onboarding — how it works */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        {[
+          { step: '01', title: 'Pick a strategy', desc: 'Browse AI trading strategies sealed in 0G Compute TEE.' },
+          { step: '02', title: 'Subscribe + insure', desc: 'Subscribe and set your coverage amount and loss threshold.' },
+          { step: '03', title: 'Auto-protected', desc: 'Signals are copied automatically. Claim pays if loss exceeds threshold.' },
+        ].map(({ step, title, desc }) => (
+          <div key={step} className="flex gap-3 border border-white/[0.04] bg-[#0a0b0f] p-4">
+            <span className="shrink-0 text-[10px] font-black text-[#b83227]/60">{step}</span>
+            <div>
+              <p className="text-xs font-black text-[#d8d0c4]">{title}</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-4 text-[#374151]">{desc}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* List your strategy */}
@@ -284,13 +329,16 @@ export default function MarketplacePage() {
 
         {/* Strategy grid */}
         <div className="flex-1 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {strategies.map(s => (
-            <StrategyCard
-              key={s.id}
-              strategy={s}
-              scheduler={copyTradeSchedulers.find(sc => sc.strategyId === s.contractId)}
-            />
-          ))}
+          {isLoadingStrategies
+            ? [0, 1, 2].map(i => <SkeletonCard key={i} />)
+            : strategies.map(s => (
+                <StrategyCard
+                  key={s.id}
+                  strategy={s}
+                  scheduler={copyTradeSchedulers.find(sc => sc.strategyId === s.contractId)}
+                />
+              ))
+          }
         </div>
       </div>
     </div>
