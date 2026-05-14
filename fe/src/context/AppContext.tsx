@@ -21,6 +21,32 @@ import {
   insuraiChain,
 } from '@/lib/chain'
 
+export type CopyTradeScheduler = {
+  strategyId: number
+  strategyName: string
+  intervalMs: number
+  isRunning: boolean
+  lastRunAt: string | null
+  nextRunAt: string | null
+  runCount: number
+  lastReturn: number | null
+  lastAction: 'buy' | 'sell' | 'hold' | null
+  lastError: string | null
+}
+
+export type CopyTradeFeedEntry = {
+  strategyId: number
+  strategyName: string
+  action: 'buy' | 'sell' | 'hold'
+  tradeReturn: number
+  confidence: number
+  reasoning: string
+  teeAttestationId: string
+  proofHash: string
+  txHash: string | null
+  timestamp: string
+}
+
 export type Policy = {
   id: string
   strategyId: string
@@ -75,6 +101,8 @@ type AppContextType = {
   selectedStrategy: Strategy | null
   loading: boolean
   lastError: string
+  copyTradeSchedulers: CopyTradeScheduler[]
+  copyTradeFeed: CopyTradeFeedEntry[]
   connectWallet: () => Promise<void>
   setRole: (role: 'copier' | 'provider' | 'underwriter') => void
   openWizard: (strategy: Strategy) => void
@@ -86,6 +114,10 @@ type AppContextType = {
   depositToPool: (amount: number) => Promise<string>
   refreshChainData: () => Promise<void>
   advanceClaim: (policyId: string) => void
+  startCopyTrade: (strategy: Strategy, intervalMs?: number) => Promise<void>
+  stopCopyTrade: (strategyId: number) => Promise<void>
+  runCopyTradeNow: (strategy: Strategy) => Promise<CopyTradeFeedEntry | null>
+  refreshCopyTrade: () => Promise<void>
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -262,6 +294,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     utilizationPct: 0,
   })
   const [strategies, setStrategies] = useState<Strategy[]>(STRATEGIES)
+  const [copyTradeSchedulers, setCopyTradeSchedulers] = useState<CopyTradeScheduler[]>([])
+  const [copyTradeFeed, setCopyTradeFeed] = useState<CopyTradeFeedEntry[]>([])
   const { address, isConnected } = useAccount()
   const { data: wagmiWalletClient } = useWalletClient()
 
@@ -632,6 +666,86 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshCopyTrade = useCallback(async () => {
+    try {
+      const [statusRes, feedRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/copy-trade/status`),
+        fetch(`${API_BASE_URL}/api/copy-trade/feed`),
+      ])
+      if (statusRes.ok) {
+        const data = await statusRes.json() as { schedulers: CopyTradeScheduler[] }
+        setCopyTradeSchedulers(data.schedulers ?? [])
+      }
+      if (feedRes.ok) {
+        const data = await feedRes.json() as { feed: CopyTradeFeedEntry[] }
+        setCopyTradeFeed(data.feed ?? [])
+      }
+    } catch {
+      // non-critical — backend may not be running
+    }
+  }, [])
+
+  async function startCopyTrade(strategy: Strategy, intervalMs?: number) {
+    setLoading(true)
+    setLastError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/copy-trade/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategyId: strategy.contractId, strategyName: strategy.name, intervalMs }),
+      })
+      const body = await res.json() as { error?: string }
+      if (!res.ok) throw new Error(body.error ?? 'Failed to start copy trade')
+      await refreshCopyTrade()
+    } catch (err) {
+      setLastError((err as Error).message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function stopCopyTrade(strategyId: number) {
+    setLoading(true)
+    setLastError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/copy-trade/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategyId }),
+      })
+      const body = await res.json() as { error?: string }
+      if (!res.ok) throw new Error(body.error ?? 'Failed to stop copy trade')
+      await refreshCopyTrade()
+    } catch (err) {
+      setLastError((err as Error).message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function runCopyTradeNow(strategy: Strategy): Promise<CopyTradeFeedEntry | null> {
+    setLoading(true)
+    setLastError('')
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/copy-trade/run-now`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategyId: strategy.contractId, strategyName: strategy.name }),
+      })
+      const body = await res.json() as { entry?: CopyTradeFeedEntry; error?: string }
+      if (!res.ok) throw new Error(body.error ?? 'Run failed')
+      await Promise.all([refreshCopyTrade(), refreshChainData()])
+      return body.entry ?? null
+    } catch (err) {
+      setLastError((err as Error).message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function advanceClaim(policyId: string) {
     const next: Record<string, Policy['status']> = {
       triggered: 'verified',
@@ -645,6 +759,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshChainData()
   }, [refreshChainData])
+
+  useEffect(() => {
+    refreshCopyTrade()
+  }, [refreshCopyTrade])
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -688,6 +806,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         depositToPool,
         refreshChainData,
         advanceClaim,
+        copyTradeSchedulers,
+        copyTradeFeed,
+        startCopyTrade,
+        stopCopyTrade,
+        runCopyTradeNow,
+        refreshCopyTrade,
       }}
     >
       {children}

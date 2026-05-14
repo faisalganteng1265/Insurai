@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useApp, Policy } from '@/context/AppContext'
+import { useApp, Policy, CopyTradeFeedEntry } from '@/context/AppContext'
 
 const STATUS_LABEL: Record<Policy['status'], string> = {
   active: 'Active',
@@ -22,10 +22,15 @@ const STATUS_STYLE: Record<Policy['status'], string> = {
   cancelled: 'border-white/10 text-[#374151]',
 }
 
+const ACTION_STYLE = {
+  buy:  { label: 'BUY',  cls: 'border-[#22c55e]/40 bg-[#022010] text-[#22c55e]' },
+  sell: { label: 'SELL', cls: 'border-[#b83227]/40 bg-[#1a0808] text-[#b83227]' },
+  hold: { label: 'HOLD', cls: 'border-[#cfa45b]/30 bg-[#15100a] text-[#cfa45b]' },
+} as const
+
 function PolicyCard({ policy }: { policy: Policy }) {
   return (
     <div className="card-gb group relative overflow-hidden p-5 transition-all duration-200">
-      {/* Status accent bar */}
       <div className={`absolute left-0 top-0 h-full w-[2px] ${
         policy.status === 'triggered' ? 'bg-[#cfa45b]' :
         policy.status === 'paid' ? 'bg-[#22c55e]' :
@@ -64,11 +69,50 @@ function PolicyCard({ policy }: { policy: Policy }) {
   )
 }
 
+function FeedCard({ entry, isFollowing }: { entry: CopyTradeFeedEntry; isFollowing: boolean }) {
+  const a = ACTION_STYLE[entry.action]
+  const returnSign = entry.tradeReturn >= 0 ? '+' : ''
+  const returnPct = (entry.tradeReturn / 100).toFixed(2)
+
+  return (
+    <div className="p-4 transition-colors hover:bg-white/[0.02]">
+      <div className="flex items-start gap-3">
+        <span className={`mt-0.5 shrink-0 border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] ${a.cls}`}>
+          {a.label}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-black text-[#d8d0c4] truncate">{entry.strategyName}</p>
+            <span className={`shrink-0 text-sm font-black ${entry.tradeReturn >= 0 ? 'text-[#22c55e]' : 'text-[#b83227]'}`}>
+              {returnSign}{returnPct}%
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] font-bold text-[#2d3748]">
+            {entry.timestamp.slice(0, 16).replace('T', ' ')} UTC
+          </p>
+          <p className="mt-1 text-[10px] font-medium leading-4 text-[#374151] line-clamp-2">{entry.reasoning}</p>
+        </div>
+      </div>
+      {isFollowing && (
+        <div className="mt-2 ml-12">
+          <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#cfa45b]/70">Following</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PortfolioPage() {
-  const { policies, attestations } = useApp()
+  const { policies, attestations, copyTradeFeed } = useApp()
   const triggeredPolicies = policies.filter(p => ['triggered', 'verified', 'paid'].includes(p.status))
   const totalCoverage = policies.reduce((s, p) => s + p.coverage, 0)
   const totalPremium  = policies.reduce((s, p) => s + p.premiumPaid, 0)
+
+  const followedStrategyIds = new Set(
+    policies.filter(p => p.status === 'active').map(p => p.contractStrategyId)
+  )
+
+  const feedToShow = copyTradeFeed.length > 0 ? copyTradeFeed : []
 
   return (
     <div>
@@ -151,27 +195,56 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        {/* Attestation history */}
-        <div>
-          <p className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#cfa45b]">
-            <span className="h-px w-4 bg-[#cfa45b]/40" /> Attestation History
-          </p>
-          <div className="card-gb-dark space-y-0 divide-y divide-white/[0.04]">
-            {attestations.map(att => (
-              <div key={att.id} className="p-4 transition-colors hover:bg-white/[0.02]">
-                <div className="mb-1.5 flex items-start justify-between gap-2">
-                  <p className="text-sm font-black text-[#d8d0c4]">{att.strategyName}</p>
-                  <span className={`text-sm font-black ${att.tradeReturn >= 0 ? 'text-[#22c55e]' : 'text-[#b83227]'}`}>
-                    {att.tradeReturn >= 0 ? '+' : ''}{(att.tradeReturn / 100).toFixed(2)}%
-                  </span>
+        {/* Right column: Copy Trade Feed + Attestation History */}
+        <div className="space-y-6">
+          {/* Copy Trade Feed */}
+          <div>
+            <p className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#cfa45b]">
+              <span className="h-px w-4 bg-[#cfa45b]/40" /> Copy Trade Feed
+            </p>
+            <div className="card-gb-dark divide-y divide-white/[0.04]">
+              {feedToShow.length > 0
+                ? feedToShow.slice(0, 10).map((entry, i) => (
+                    <FeedCard
+                      key={`${entry.strategyId}-${entry.timestamp}-${i}`}
+                      entry={entry}
+                      isFollowing={followedStrategyIds.has(entry.strategyId)}
+                    />
+                  ))
+                : (
+                  <div className="p-8 text-center">
+                    <p className="text-sm font-bold text-[#374151]">No signals yet.</p>
+                    <p className="mt-1 text-[10px] font-medium text-[#2d3748]">
+                      Signals appear when the provider runs a strategy.
+                    </p>
+                  </div>
+                )
+              }
+            </div>
+          </div>
+
+          {/* Attestation History */}
+          <div>
+            <p className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#cfa45b]">
+              <span className="h-px w-4 bg-[#cfa45b]/40" /> On-Chain Attestations
+            </p>
+            <div className="card-gb-dark space-y-0 divide-y divide-white/[0.04]">
+              {attestations.map(att => (
+                <div key={att.id} className="p-4 transition-colors hover:bg-white/[0.02]">
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
+                    <p className="text-sm font-black text-[#d8d0c4]">{att.strategyName}</p>
+                    <span className={`text-sm font-black ${att.tradeReturn >= 0 ? 'text-[#22c55e]' : 'text-[#b83227]'}`}>
+                      {att.tradeReturn >= 0 ? '+' : ''}{(att.tradeReturn / 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-bold text-[#2d3748]">{att.timestamp}</p>
+                  <p className="mt-1 font-mono text-[9px] text-[#1e2330]">{att.teeId}</p>
                 </div>
-                <p className="text-[10px] font-bold text-[#2d3748]">{att.timestamp}</p>
-                <p className="mt-1 font-mono text-[9px] text-[#1e2330]">{att.teeId}</p>
-              </div>
-            ))}
-            {attestations.length === 0 && (
-              <p className="p-8 text-center text-sm font-bold text-[#374151]">No attestations yet.</p>
-            )}
+              ))}
+              {attestations.length === 0 && (
+                <p className="p-8 text-center text-sm font-bold text-[#374151]">No attestations yet.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { strategyRouter } from "./routes/strategy.js";
 import { attestationsRouter } from "./routes/attestations.js";
 import { poolRouter } from "./routes/pool.js";
 import { demoRouter } from "./routes/demo.js";
+import { copyTradeRouter } from "./routes/copyTrade.js";
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use("/api", strategyRouter);
 app.use("/api/attestations", attestationsRouter);
 app.use("/api/pool", poolRouter);
 app.use("/api/demo", demoRouter);
+app.use("/api/copy-trade", copyTradeRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 
