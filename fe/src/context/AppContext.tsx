@@ -796,7 +796,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         args: [usdcAmount],
       })
       await waitForReceipt(hash)
-      await readPoolStats()
+      await Promise.all([readPoolStats(), readDemoUsdcBalance(account)])
       toast.success(`$${amount.toLocaleString()} USDC deposited to pool`)
       return hash
     } catch (err) {

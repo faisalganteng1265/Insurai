@@ -7,13 +7,13 @@ import ConnectWalletPrompt from '@/components/ConnectWalletPrompt'
 
 export default function UnderwriterPage() {
   const { policies, poolStats, depositToPool, withdrawFromPool, underwriterShares, underwriterShareValue, loading, walletConnected } = useApp()
-  const [withdrawn, setWithdrawn] = useState(false)
+  const [withdrawn, setWithdrawn]         = useState(false)
+  const [depositAmount, setDepositAmount] = useState('10000')
+  const [deposited, setDeposited]         = useState(false)
 
   if (!walletConnected) return <ConnectWalletPrompt message="Connect your wallet to deposit liquidity and earn premium yield." />
 
   const yieldEarned = Math.max(0, underwriterShareValue - underwriterShares)
-  const [depositAmount, setDepositAmount] = useState('10000')
-  const [deposited, setDeposited]         = useState(false)
 
   const paidClaims     = policies.filter(p => p.status === 'paid')
   const activePolicies = policies.filter(p => p.status === 'active')
