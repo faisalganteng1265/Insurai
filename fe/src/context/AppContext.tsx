@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import type { Address } from 'viem'
-import { useAccount, useWalletClient } from 'wagmi'
+import { useAccount, useWalletClient, useChainId, useSwitchChain } from 'wagmi'
 import { keccak256, toHex, stringToBytes } from 'viem'
 import { toast } from 'sonner'
 import { friendlyError } from '@/lib/friendlyError'
@@ -347,6 +347,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [demoUsdcBalance, setDemoUsdcBalance] = useState(0)
   const { address, isConnected } = useAccount()
   const { data: wagmiWalletClient } = useWalletClient()
+  const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
 
   const readStrategies = useCallback(async (): Promise<Strategy[]> => {
     const count = await publicClient.readContract({
@@ -1073,6 +1075,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPendingFeesByStrategy({})
     })
   }, [isConnected, address, refreshChainData])
+
+  useEffect(() => {
+    if (isConnected && chainId !== insuraiChain.id) {
+      switchChain({ chainId: insuraiChain.id })
+    }
+  }, [isConnected, chainId, switchChain])
 
   return (
     <AppContext.Provider
