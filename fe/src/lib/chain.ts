@@ -26,7 +26,7 @@ export const CONTRACTS = {
   policyManager: (process.env.NEXT_PUBLIC_POLICY_MANAGER_ADDRESS ?? '0xbdaea5744ac79132c96420ce13de3d18c38feeca') as Address,
 }
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://surgeons-implies-mills-booth.trycloudflare.com'
 
 export const EXPLORER_BASE = 'https://chainscan.0g.ai'
 export function explorerTx(hash: string) { return `${EXPLORER_BASE}/tx/${hash}` }
@@ -130,7 +130,7 @@ export async function getWalletClient() {
   })
 }
 
-export async function ensureGalileoNetwork() {
+export async function ensureGalileoNetwork() { // keeps existing callers working
   if (!window.ethereum) throw new Error('Browser wallet not found')
 
   const chainIdHex = `0x${insuraiChain.id.toString(16)}`
